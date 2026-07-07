@@ -31,7 +31,7 @@ from sbi.utils import BoxUniform  # noqa: E402
 from calib.diagnostics import run_sbc_check, run_tarp_check  # noqa: E402
 from core.noise import DEFAULT_NOISE_FRAC  # noqa: E402
 from core.theta import PRIOR_BOUNDS, THETA_NAMES  # noqa: E402
-from sim.sweep import run_sweep  # noqa: E402
+from sim.sweep import run_sweep_checkpointed  # noqa: E402
 
 DRY = bool(int(os.getenv("DRY", "0")))
 if DRY:
@@ -40,8 +40,16 @@ else:
     N_TRAIN, N_CALIB, BUDGETS, N_POST, N_OBS = 1000, 250, [250, 500, 1000], 200, 20
 
 OUT = Path(__file__).resolve().parents[1] / "outputs"
+RESULTS = OUT / "day2_results.txt"
 _LO = np.array([PRIOR_BOUNDS[k][0] for k in THETA_NAMES], dtype=np.float32)
 _HI = np.array([PRIOR_BOUNDS[k][1] for k in THETA_NAMES], dtype=np.float32)
+
+
+def emit(s: str) -> None:
+    """Print and append to a durable results file, so a lost stdout does not hide numbers."""
+    print(s, flush=True)
+    with open(RESULTS, "a") as f:
+        f.write(s + "\n")
 
 
 def _train(theta, x):
@@ -64,19 +72,23 @@ def _median_contraction(post, x_obs, prior_std, n=1000):
 
 def main() -> None:
     OUT.mkdir(exist_ok=True)
+    RESULTS.write_text("")  # durable results land here, surviving a lost stdout
     torch.manual_seed(0)
     n_workers = min(os.cpu_count() or 2, 8)
 
+    ckpt = None if DRY else OUT / "day2_sweep_ckpt.npz"
     t = time.perf_counter()
-    theta, _xc, x, n_draw = run_sweep(N_TRAIN + N_CALIB, DEFAULT_NOISE_FRAC, n_workers, seed=0)
-    print(f"[sweep] {theta.shape[0]}/{n_draw} usable in {time.perf_counter() - t:.0f}s")
+    theta, _xc, x, n_done = run_sweep_checkpointed(
+        N_TRAIN + N_CALIB, DEFAULT_NOISE_FRAC, n_workers, seed=0, checkpoint_path=ckpt
+    )
+    emit(f"[sweep] {theta.shape[0]} usable ({n_done} draws) in {time.perf_counter() - t:.0f}s")
 
     m = theta.shape[0]
     n_tr = min(N_TRAIN, m - N_CALIB)
     th_tr, x_tr = theta[:n_tr], x[:n_tr]
     th_ca, x_ca = theta[n_tr:], x[n_tr:]
     prior_std = th_tr.std(axis=0)
-    print(f"[split] train={n_tr} calib={th_ca.shape[0]}")
+    emit(f"[split] train={n_tr} calib={th_ca.shape[0]}")
 
     # --- budget-adequacy curve: contraction vs training budget ---
     obs_idx = np.arange(min(N_OBS, th_ca.shape[0]))
@@ -86,7 +98,7 @@ def main() -> None:
     for b in [x for x in BUDGETS if x <= n_tr] or [n_tr]:
         post = _train(th_tr[:b], x_tr[:b])
         curve[b] = _median_contraction(post, x_obs, prior_std)
-        print(
+        emit(
             f"[budget {b}] median contraction: "
             + ", ".join(f"{k}={curve[b][i]:.2f}" for i, k in enumerate(THETA_NAMES))
         )
@@ -94,9 +106,9 @@ def main() -> None:
     b_full = max(curve)
 
     # --- headline contraction table (full model) ---
-    print("\n[contraction table] median over held-out obs (post_std / empirical-prior_std)")
+    emit("\n[contraction table] median over held-out obs (post_std / empirical-prior_std)")
     for i, k in enumerate(THETA_NAMES):
-        print(f"  {k:16s} {curve[b_full][i]:.2f}")
+        emit(f"  {k:16s} {curve[b_full][i]:.2f}")
 
     # --- degeneracy corner plot for one held-out observation ---
     xo0 = x_ca[obs_idx[0]]
@@ -115,7 +127,7 @@ def main() -> None:
     # --- calibration: SBC + TARP coverage ---
     try:
         ranks, sbc = run_sbc_check(post_full, th_ca, x_ca, n_post=N_POST)
-        print(f"\n[SBC] ks_pvals per param: {sbc.get('ks_pvals')}")
+        emit(f"\n[SBC] ks_pvals per param: {sbc.get('ks_pvals')}")
         fig, axes = plt.subplots(1, len(THETA_NAMES), figsize=(2 * len(THETA_NAMES), 2))
         for i, ax in enumerate(np.atleast_1d(axes)):
             ax.hist(ranks[:, i], bins=10, color="#4C78A8")
@@ -129,7 +141,7 @@ def main() -> None:
 
     try:
         tarp = run_tarp_check(post_full, th_ca, x_ca, n_post=N_POST)
-        print(f"[TARP] ATC={tarp['atc']:+.3f} (0 = calibrated), KS p={tarp['ks_pval']:.3f}")
+        emit(f"[TARP] ATC={tarp['atc']:+.3f} (0 = calibrated), KS p={tarp['ks_pval']:.3f}")
         plt.figure(figsize=(4, 4))
         plt.plot([0, 1], [0, 1], "--", c="grey", lw=1)
         plt.plot(tarp["alpha"], tarp["ecp"], color="#E45756")

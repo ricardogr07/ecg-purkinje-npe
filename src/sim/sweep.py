@@ -22,7 +22,8 @@ for _v in (
 ):
     _os.environ.setdefault(_v, "1")
 
-from concurrent.futures import ProcessPoolExecutor  # noqa: E402
+from concurrent.futures import ProcessPoolExecutor, as_completed  # noqa: E402
+from pathlib import Path  # noqa: E402
 
 import numpy as np  # noqa: E402
 
@@ -70,3 +71,71 @@ def run_sweep(n: int, noise_frac: float, n_workers: int, seed: int = 0):
     x_clean = np.array([r[1] for r in ok], dtype=float)
     x_noised = np.array([r[2] for r in ok], dtype=float)
     return theta_ok, x_clean, x_noised, n_draw
+
+
+def run_sweep_checkpointed(
+    n: int,
+    noise_frac: float,
+    n_workers: int,
+    seed: int = 0,
+    checkpoint_path: str | Path | None = None,
+    save_every: int = 64,
+):
+    """Resumable sweep. Draws are deterministic from seed; progress is saved to
+    checkpoint_path every save_every completions and reloaded on restart, so a crash (or a
+    laptop reboot) costs at most save_every sims instead of the whole run. Same return shape
+    as run_sweep: (theta, x_clean, x_noised, n_done). Reuse for the 5k run.
+    """
+    n_draw = int(np.ceil(n / 0.85))
+    thetas = sample_prior(n_draw, np.random.default_rng(seed))
+    done: set[int] = set()
+    th_ok: list = []
+    xc: list = []
+    xn: list = []
+
+    if checkpoint_path and Path(checkpoint_path).exists():
+        with np.load(checkpoint_path) as d:  # context-close so the later atomic replace works
+            done = {int(i) for i in d["done"]}
+            th_ok = list(d["theta"]) if d["theta"].size else []
+            xc = list(d["x_clean"]) if d["x_clean"].size else []
+            xn = list(d["x_noised"]) if d["x_noised"].size else []
+        print(f"[sweep] resumed: {len(th_ok)} usable from {len(done)} done draws", flush=True)
+
+    def _save() -> None:
+        if not checkpoint_path:
+            return
+        tmp = str(checkpoint_path) + ".tmp.npz"  # must end in .npz; np.savez appends it otherwise
+        np.savez(
+            tmp,
+            done=np.array(sorted(done), dtype=int),
+            theta=np.array(th_ok, dtype=float),
+            x_clean=np.array(xc, dtype=float),
+            x_noised=np.array(xn, dtype=float),
+        )
+        _os.replace(tmp, checkpoint_path)
+
+    todo = [i for i in range(n_draw) if i not in done]
+    if todo and len(th_ok) < n:
+        with ProcessPoolExecutor(max_workers=n_workers, initializer=_init_worker) as ex:
+            futs = {ex.submit(_run_one, (thetas[i], noise_frac, seed + 1000 + i)): i for i in todo}
+            completed = 0
+            for fut in as_completed(futs):
+                done.add(futs[fut])
+                r = fut.result()
+                if r is not None:
+                    th_ok.append(r[0])
+                    xc.append(r[1])
+                    xn.append(r[2])
+                completed += 1
+                if completed % save_every == 0:
+                    _save()
+                    print(f"[sweep] {len(th_ok)} usable, {len(done)}/{n_draw} draws", flush=True)
+                if len(th_ok) >= n:
+                    break
+    _save()
+    return (
+        np.array(th_ok, dtype=float),
+        np.array(xc, dtype=float),
+        np.array(xn, dtype=float),
+        len(done),
+    )
