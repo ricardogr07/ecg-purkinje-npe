@@ -152,6 +152,7 @@ def run_ecg_core(
     return_diagnostics: bool = False,
     purkinje_engine: str = "jax",
     dedup_pmj_nodes: bool = False,
+    compute_ecg_each_iter: bool = True,
 ) -> Tuple[NDArray[np.float64], Dict[str, object]]:
     """Run the Purkinje ↔ Myocardium coupling loop (notebook-compatible).
 
@@ -338,19 +339,24 @@ def run_ecg_core(
                 }
             )
 
-        # --- ECG early-stop (like the notebook)
-        ecg_vec = getattr(myocardium, "new_get_ecg")(
-            record_array=False
-        )  # shape (12, T)
-        ecg_vec = np.asarray(ecg_vec, dtype=float)
+        # --- ECG early-stop (like the notebook). The per-iteration ECG is only used for
+        # this convergence check; skipping it (compute_ecg_each_iter=False) saves one full
+        # lead-field solve per iteration and does not affect the final ECG, which is
+        # recomputed after the loop. Use only when the caller caps kmax at a known-converged
+        # value (the crtdemo coupling converges in 2 iters).
         ecg_err = np.inf
-        if prev_ecg_vec is not None:
-            num = float(np.linalg.norm(ecg_vec - prev_ecg_vec))
-            den = float(np.linalg.norm(prev_ecg_vec)) + 1e-12
-            ecg_err = num / den
-            ecg_err_hist.append(ecg_err)
-            _log(f"[iter {it}] ECG error = {ecg_err:.6g}")
-        prev_ecg_vec = ecg_vec
+        if compute_ecg_each_iter:
+            ecg_vec = getattr(myocardium, "new_get_ecg")(
+                record_array=False
+            )  # shape (12, T)
+            ecg_vec = np.asarray(ecg_vec, dtype=float)
+            if prev_ecg_vec is not None:
+                num = float(np.linalg.norm(ecg_vec - prev_ecg_vec))
+                den = float(np.linalg.norm(prev_ecg_vec)) + 1e-12
+                ecg_err = num / den
+                ecg_err_hist.append(ecg_err)
+                _log(f"[iter {it}] ECG error = {ecg_err:.6g}")
+            prev_ecg_vec = ecg_vec
 
         _log(f"[iter {it}] total {time.perf_counter() - t_it:.3f}s")
 

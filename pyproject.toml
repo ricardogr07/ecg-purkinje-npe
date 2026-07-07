@@ -47,6 +47,8 @@ testpaths = ["tests"]
 line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
+# Vendored own libraries keep their own style/CI; do not lint them with our rules.
+extend-exclude = ["packages"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
