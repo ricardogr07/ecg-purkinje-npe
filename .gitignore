@@ -10,8 +10,10 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Data & artifacts (large / regenerated, publish checkpoints via releases)
-data/
+# Data & artifacts (large / regenerated, publish checkpoints via releases).
+# Anchored to repo root so it ignores the top-level Strocchi download only, not the
+# small demo geometry vendored inside packages/purkinje-uv/data.
+/data/
 *.vtk
 *.vtu
 *.case
@@ -42,9 +44,14 @@ credentials.json
 .DS_Store
 .vscode/
 
-# Local-only orchestration and strategy (keep internal notes out of the public repo)
-.claude/
+# Local-only orchestration and strategy
 .localagent/
-
+.claude/
 # transient FUSE temp files
 .fuse_hidden*
+
+# Vendored simulator libraries (packages/*): keep their bundled demo assets tracked,
+# overriding the global data / *.vtk / *.vtu / *.pkl rules above so the crtdemo geometry,
+# fibers, electrodes, and ground-truth ECG ship with the repo.
+!packages/**/data/
+!packages/**/data/**

@@ -8,7 +8,7 @@ Amortized, calibrated **identifiability** characterization of the Purkinje condu
 ## Non-negotiable rules (hackathon eligibility + honesty)
 - **New work only.** All project code is written during the event (hacking starts 12:30 ET Jul 7). **Do not `git init` / first-commit until after kickoff.** Do not paste in pre-existing project code.
 - **Open source.** Apache-2.0. Publish backend, frontend, infra, and trained weights.
-- **Own libraries are dependencies, not code to copy.** `purkinje-uv` and `JAX-BO` are consumed as pinned PyPI deps. **Never import or vendor `purkinje-learning`** (that's the thesis analysis). The mesh-ingestion rework of `purkinje-uv` is done fresh here.
+- **Vendored own libraries, declared openly (director decision Jul 7).** `purkinje-uv` (and `JAX-BO` when it lands) are the author's own MIT libraries, **vendored in-tree under `packages/` and actively reworked during the event** (we need live edits to the mesh ingestion). This is intentional and disclosed in `README.md` and the writeup: standing on our own open-source shoulders, the analysis is new work. Retain each vendored lib's upstream LICENSE. **Never vendor or import `purkinje-learning`** (that is the thesis analysis, and stays out).
 - **Attribute data:** Strocchi mesh cohort is CC-BY-4.0 (cite it).
 - **Verification discipline.** Every factual/scientific claim is checked against a primary source before it enters a doc, the demo, or the write-up. Maintain the verification ledger (see brief §14). If you can't verify, mark it "unverified", never assert.
 
