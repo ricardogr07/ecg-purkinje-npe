@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.uv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Data & artifacts (large / regenerated, publish checkpoints via releases)
+data/
+*.vtk
+*.vtu
+*.case
+*.geo
+*.tar.gz
+runs/
+outputs/
+checkpoints/
+*.pt
+*.pkl
+
+# Node / Next.js
+ui/node_modules/
+ui/.next/
+ui/out/
+
+# Infra / secrets, NEVER commit
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+.env
+.env.*
+credentials.json
+*token*.json
+
+# OS / editor
+.DS_Store
+.vscode/
+
+# Local-only orchestration and strategy (keep internal notes out of the public repo)
+.claude/
+.localagent/
+
+# transient FUSE temp files
+.fuse_hidden*

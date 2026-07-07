@@ -1,0 +1,7 @@
+# Normalize all text to LF in the repo. Guarantees the bash commit-msg hook and the
+# .sh worktree scripts stay executable on Windows dev and the Linux (ECS) deploy target.
+* text=auto eol=lf
+
+# Explicit: shell scripts and git hooks must be LF or bash refuses the shebang.
+*.sh text eol=lf
+scripts/git-hooks/* text eol=lf

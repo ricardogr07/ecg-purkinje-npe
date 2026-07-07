@@ -1,0 +1,40 @@
+[project]
+name = "ecg-purkinje-npe"
+version = "0.1.0"
+description = "Calibrated, amortized identifiability of Purkinje conduction from the surface ECG."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [{ name = "ecg-purkinje-npe contributors" }]
+dependencies = [
+    "purkinje-uv",
+    "sbi",
+    "numpy",
+    "matplotlib",
+]
+
+# Baseline (JAX-BO) is not needed until the Sat validation step; add it then to
+# avoid pinning an unverified package name on day 1. See docs/execution-plan.md.
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+# Research app, not a distributable package: uv manages the venv and deps but does
+# not build/install this project. Source is on the path via pytest pythonpath below.
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
