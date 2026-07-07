@@ -15,12 +15,13 @@ Built for *Built with Claude: Life Sciences* (Researcher Track), Jul 7-13. We tr
 - [`.claude/agents/`](.claude/agents), the parallel track subagents · [`.localagent/`](.localagent), the orchestrator cockpit.
 
 ## Stack
-Python (`uv`, `ruff`, `pytest`), `sbi` for NPE; `purkinje-uv` + `JAX-BO` as pinned dependencies (own, MIT). FastAPI + Next.js demo; Terraform → one ECS Fargate task (CPU-only). Data: Strocchi four-chamber mesh cohort (Zenodo 3890034, CC-BY-4.0).
+Python (`uv`, `ruff`, `pytest`), `sbi` for NPE; the author's own libraries `purkinje-uv`, `myocardial-mesh`, and `jaxbo` vendored in-tree (see below). FastAPI + Next.js demo; Terraform to one ECS Fargate task (CPU-only). Data: Strocchi four-chamber mesh cohort (Zenodo 3890034, CC-BY-4.0).
 
 ## Attribution and vendored components
 This project stands on the author's own open-source libraries, vendored in-tree and reworked during the event as part of the new work:
-- `packages/purkinje-uv` (MIT), the fractal-tree Purkinje generator, FIM eikonal solver, and ECG utilities; its mesh-ingestion layer is reworked here. Upstream: https://github.com/ricardogr07/purkinje-uv
-- `JAX-BO` (author's own fork), the Bayesian-optimization validation baseline (added later in the week).
+- `packages/purkinje-uv` (MIT), fractal-tree Purkinje generation and the FIM eikonal activation solver; its mesh-ingestion layer is reworked here. Upstream: https://github.com/ricardogr07/purkinje-uv
+- `packages/myocardial-mesh` (MIT), the volumetric myocardial eikonal and the lead-field pseudo-ECG that produce the 12-lead ECG, plus the bundled crtdemo geometry (mesh, fibers, electrodes). Upstream: https://github.com/ricardogr07/purkinje-learning-myocardial-mesh
+- `packages/jax-bo` (Apache-2.0, author's own fork), the Bayesian-optimization validation baseline (added later in the week).
 
 Each vendored library retains its upstream LICENSE. The thesis analysis package `purkinje-learning` is deliberately not used. Data: Strocchi four-chamber cohort (Zenodo 3890034, CC-BY-4.0).
 
