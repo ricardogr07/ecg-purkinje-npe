@@ -12,6 +12,9 @@ dependencies = [
     "sbi",
     "numpy",
     "matplotlib",
+    "fastapi",
+    "uvicorn",
+    "httpx",
 ]
 
 # Own libraries are vendored in-tree (packages/) and consumed editable, so our changes to
@@ -40,13 +43,13 @@ baseline = [
 package = false
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-src = ["src", "tests"]
+src = ["src", "tests", "conduction_lens"]
 # Vendored own libraries and the Design track's ui/ keep their own style/CI; not ours to lint.
 extend-exclude = ["packages", "ui"]
 

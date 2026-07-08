@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Contract B results artifact (+ Design calibration extension)",
+  "description": "One JSON per inference run. Optional blocks may be absent; the UI degrades gracefully. Blocks marked (ext) are additions the Design track needs; see mock/README.md.",
+  "type": "object",
+  "required": ["run_id", "geometry_id", "theta_names"],
+  "properties": {
+    "run_id": { "type": "string" },
+    "geometry_id": { "type": "string" },
+    "synthetic_truth": { "type": "boolean", "description": "(ext) true for a synthetic-truth identifiability run" },
+    "theta_names": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "observation_kind": { "type": "string", "enum": ["features", "waveform"] },
+    "prior": {
+      "type": "object",
+      "description": "(ext) per-param [lo, hi] prior bounds",
+      "additionalProperties": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+    },
+    "param_meta": {
+      "type": "object",
+      "description": "(ext) per-param display metadata",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "alias": { "type": "string" },
+          "unit": { "type": "string" },
+          "block": { "type": "string" },
+          "label": { "type": "string" }
+        }
+      }
+    },
+    "reference_theta": {
+      "type": "object",
+      "description": "(ext) synthetic ground truth per param",
+      "additionalProperties": { "type": "number" }
+    },
+    "input_ecg": {
+      "type": "object",
+      "required": ["leads", "signal"],
+      "properties": {
+        "leads": { "type": "array", "items": { "type": "string" } },
+        "fs_hz": { "type": "number" },
+        "times_ms": { "type": "array", "items": { "type": "number" } },
+        "signal": { "type": "array", "items": { "type": "array", "items": { "type": "number" } }, "description": "[lead][sample]" }
+      }
+    },
+    "posterior": {
+      "type": "object",
+      "properties": {
+        "samples": { "type": "array", "items": { "type": "array", "items": { "type": "number" } }, "description": "[draw][param], param order = theta_names" },
+        "contraction": { "type": "object", "additionalProperties": { "type": "number" }, "description": "posterior_std / prior_std per param" },
+        "coverage": { "type": "object", "additionalProperties": { "type": "number" } }
+      }
+    },
+    "posterior_predictive_ecg": {
+      "type": "object",
+      "properties": {
+        "leads": { "type": "array", "items": { "type": "string" } },
+        "signal": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } },
+        "band_lo": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } },
+        "band_hi": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+      }
+    },
+    "activation_map": {
+      "type": "object",
+      "properties": {
+        "mesh_ref": { "type": "string" },
+        "units": { "type": "string" },
+        "values": { "type": "array", "items": { "type": "number" }, "description": "per-vertex LAT, length == geometry.vertices length" }
+      }
+    },
+    "calibration": {
+      "type": "object",
+      "description": "(ext) SBC + TARP diagnostics, before/after conformal",
+      "properties": {
+        "method": { "type": "string" },
+        "nominal_level": { "type": "number" },
+        "n_sbc_ranks": { "type": "number" },
+        "sbc_bins": { "type": "number" },
+        "sbc": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "before": { "type": "array", "items": { "type": "number" } },
+              "after": { "type": "array", "items": { "type": "number" } }
+            }
+          }
+        },
+        "coverage_curve": {
+          "type": "object",
+          "properties": {
+            "nominal": { "type": "array", "items": { "type": "number" } },
+            "before": { "type": "array", "items": { "type": "number" } },
+            "after": { "type": "array", "items": { "type": "number" } }
+          }
+        },
+        "sbc_ks_pvalue": { "type": "object", "properties": { "before": { "type": "number" }, "after": { "type": "number" } } },
+        "tarp_atc": { "type": "object", "properties": { "before": { "type": "number" }, "after": { "type": "number" } } },
+        "conformal_t": { "type": "object", "additionalProperties": { "type": "number" } }
+      }
+    },
+    "noise_model": {
+      "type": "object",
+      "properties": {
+        "kind": { "type": "string" },
+        "sigma": { "type": "number" },
+        "timing_sigma_ms": { "type": "number" },
+        "amp_sigma_mv": { "type": "number" }
+      }
+    },
+    "meta": { "type": "object" }
+  }
+}

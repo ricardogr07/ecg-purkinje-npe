@@ -38,7 +38,7 @@ from calib.conformal import (  # noqa: E402
 )
 from calib.diagnostics import run_tarp_check  # noqa: E402
 from core.features import extract_features  # noqa: E402
-from core.noise import DEFAULT_WAVEFORM_SIGMA_MV  # noqa: E402
+from core.noise import DEFAULT_WAVEFORM_SIGMA_MV, to_physiological_mv  # noqa: E402
 from core.theta import PRIOR_BOUNDS, THETA_NAMES  # noqa: E402
 from sim.forward import REFERENCE_THETA  # noqa: E402
 
