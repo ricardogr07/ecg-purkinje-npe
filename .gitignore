@@ -22,6 +22,7 @@ htmlcov/
 runs/
 outputs/
 checkpoints/
+sbi-logs/
 *.pt
 *.pkl
 
@@ -47,6 +48,8 @@ credentials.json
 # Local-only orchestration and strategy
 .localagent/
 .claude/
+.claude_research/
+
 # transient FUSE temp files
 .fuse_hidden*
 
@@ -55,3 +58,6 @@ credentials.json
 # fibers, electrodes, and ground-truth ECG ship with the repo.
 !packages/**/data/
 !packages/**/data/**
+
+# Research lane working notes (internal, like .claude and .localagent)
+.claude_research/
