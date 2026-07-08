@@ -47,8 +47,8 @@ testpaths = ["tests"]
 line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
-# Vendored own libraries keep their own style/CI; do not lint them with our rules.
-extend-exclude = ["packages"]
+# Vendored own libraries and the Design track's ui/ keep their own style/CI; not ours to lint.
+extend-exclude = ["packages", "ui"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
