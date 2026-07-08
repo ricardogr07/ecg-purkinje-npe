@@ -48,6 +48,7 @@ REFERENCE_THETA: dict[str, float] = {
     "init_length_rv": 55.0,
     "branch_angle": 0.175,
     "w": 0.10,
+    "cv_myo": 0.67,  # Contract A nominal (Fu 2024); myocardial CV, now an exposed forward input
 }
 
 
@@ -121,6 +122,10 @@ def forward(
         theta["branch_angle"],
         theta["w"],
     )
+    # Contract A param 7: myocardial CV. Inert for 6D theta (key absent); rebuilds D + FIM when
+    # present. delta_iv/cv above drive the Purkinje pass; cv_myo drives the myocardial eikonal.
+    if "cv_myo" in theta:
+        geom.set_fiber_cv(theta["cv_myo"])
     ecg, _ = run_ecg_core(
         myocardium=geom,
         lv_tree=lv,

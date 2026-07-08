@@ -77,10 +77,11 @@ def main() -> None:
     post = train_npe(th_tr, x_tr)
     sets = draw_sample_sets(post, x_ca, N_POST)  # (M, N, D)
 
+    d = len(THETA_NAMES)
     t = fit_inflation(th_ca, sets)
-    ks0 = sbc_ks_pvals(th_ca, sets, np.ones(6))
+    ks0 = sbc_ks_pvals(th_ca, sets, np.ones(d))
     ks1 = sbc_ks_pvals(th_ca, sets, t)
-    cov0 = central_coverage(th_ca, sets, np.ones(6), LEVEL)
+    cov0 = central_coverage(th_ca, sets, np.ones(d), LEVEL)
     cov1 = central_coverage(th_ca, sets, t, LEVEL)
     contr0 = np.median(sets.std(axis=1), axis=0) / prior_std
     contr1 = t * contr0
@@ -101,7 +102,7 @@ def main() -> None:
     )
 
     fig, ax = plt.subplots(1, 2, figsize=(9, 3.4))
-    xpos = np.arange(6)
+    xpos = np.arange(d)
     ax[0].bar(xpos, t, color="#4C78A8")
     ax[0].axhline(1.0, ls="--", c="grey")
     ax[0].set_xticks(xpos)

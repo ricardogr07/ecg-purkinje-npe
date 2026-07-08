@@ -104,6 +104,11 @@ class MyocardialMesh:
         self.Gi_nodal = fr.Gi_nodal
         self.Gi_cell = fr.Gi_cell
         self.D = fr.D
+        # Base diffusion tensor + its longitudinal fiber CV, kept so set_fiber_cv can rescale
+        # myocardial CV per call (cv_myo, Contract A param 7) without re-reading fibers. Only D
+        # and the FIM solver depend on this scale; K and the lead fields (Gi) do not.
+        self._D_base = fr.D.copy()
+        self._cv_fiber_base = float(fr.cv_fiber_m_per_s)
         print(
             f"Conduction velocity in the direction of the fibers: {fr.cv_fiber_m_per_s} m/s"
         )
@@ -142,6 +147,22 @@ class MyocardialMesh:
             self.xyz, self.cells, self.D, device=self.device
         )
         print(time.time() - t0)
+
+    def set_fiber_cv(self, cv_long_m_per_s: float) -> None:
+        """Set the myocardial (longitudinal fiber) conduction velocity, rebuilding D + FIM.
+
+        The eikonal travel time scales as 1/sqrt(D), and the longitudinal fiber CV as sqrt(D),
+        so rescaling the base tensor by (cv_target / cv_base)**2 makes the fiber-direction CV
+        equal to cv_target. Transverse CV scales by the same factor, i.e. the anisotropy ratio
+        is held at the crtdemo default (a modeling choice; cv_myo is a single knob, not the full
+        conductivity tensor). Only D and the FIM solver change; the Laplacian K and lead fields
+        (built from Gi) are independent of D and stay fixed, so the ECG projection is unchanged.
+        """
+        scale = (float(cv_long_m_per_s) / self._cv_fiber_base) ** 2
+        self.D = self._D_base * scale
+        self.fim = FIMPY.create_fim_solver(
+            self.xyz, self.cells, self.D, device=self.device
+        )
 
     def activate_fim(
         self,
