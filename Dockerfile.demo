@@ -24,8 +24,9 @@ COPY packages/ ./packages/
 RUN uv sync --frozen --no-dev --no-install-project 2>/dev/null || uv sync --no-dev --no-install-project
 COPY src/ ./src/
 COPY --from=ui /ui/out ./ui/out
-# The Contract-B artifact the API serves (the UI also bundled it at build via ui/mock/results.json).
-COPY ui/mock/results.json ./outputs/results.json
+# The REAL Contract-B artifact the API serves at /infer (staged at repo root by `make bind-artifact`;
+# the UI bundle renders the design mock, whose richer shape the emitter does not yet fully match).
+COPY contract_b.json ./outputs/results.json
 ARG GIT_SHA=unknown
 ENV GIT_SHA=$GIT_SHA UI_DIR=/app/ui/out ECG_ARTIFACT=/app/outputs/results.json
 EXPOSE 8000

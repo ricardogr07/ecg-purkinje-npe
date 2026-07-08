@@ -61,3 +61,4 @@ credentials.json
 
 # Research lane working notes (internal, like .claude and .localagent)
 .claude_research/
+contract_b.json

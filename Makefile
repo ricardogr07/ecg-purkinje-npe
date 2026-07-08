@@ -18,11 +18,12 @@ cli-dryrun: cli-image
 	docker run --rm -v "$(CURDIR)/runs:/app/runs" conduction-lens run --geometry crtdemo --dry-run --out runs/docker_dry
 
 # --- Demo server image ---
-# Bake the real Contract-B artifact into the UI bundle + the API before building the demo.
+# The UI renders the design mock (built to show the finding); /infer serves the REAL Contract-B
+# artifact. bind-artifact stages the real artifact at repo root for the API to bake in.
 bind-artifact:
-	cp "$(ARTIFACT)" ui/mock/results.json
+	cp "$(ARTIFACT)" contract_b.json
 
-demo-image:
+demo-image: bind-artifact
 	docker build -f Dockerfile.demo --build-arg GIT_SHA=$(GIT_SHA) -t conduction-lens-demo .
 
 demo-run: demo-image
