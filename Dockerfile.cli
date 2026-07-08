@@ -1,0 +1,30 @@
+# conduction_lens CLI / pipeline image (CPU-only). The reusable, cloud-runnable research artifact.
+#   docker build -f Dockerfile.cli -t conduction-lens .
+#   docker run --rm -v "$PWD/runs:/app/runs" conduction-lens run --geometry crtdemo --dry-run --out runs/d
+FROM python:3.11-slim-bookworm
+
+# System libs: vtk/pyvista mesh IO (myocardial-mesh) + g++/headers to build fim-python's
+# native eikonal wheel (pulled in by purkinje-uv).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 libglib2.0-0 libxrender1 libxext6 libsm6 build-essential python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+WORKDIR /app
+ENV UV_LINK_MODE=copy OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
+
+# Deps layer: copy the lock + vendored path-source packages first so this caches across code edits.
+COPY pyproject.toml uv.lock ./
+COPY packages/ ./packages/
+RUN uv sync --frozen --no-dev --no-install-project 2>/dev/null || uv sync --no-dev --no-install-project
+
+# Application code.
+COPY src/ ./src/
+COPY conduction_lens/ ./conduction_lens/
+COPY experiments/ ./experiments/
+
+ARG GIT_SHA=unknown
+ENV GIT_SHA=$GIT_SHA
+ENTRYPOINT ["uv", "run", "python", "-m", "conduction_lens"]
+CMD ["--help"]

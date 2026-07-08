@@ -1,0 +1,32 @@
+# Demo-server image (one URL): FastAPI /infer + the built Next.js static UI, same-origin.
+#   make bind-artifact ARTIFACT=outputs/day3_7d_snr_results.json   # bake real posteriors
+#   docker build -f Dockerfile.demo -t conduction-lens-demo .
+#   docker run --rm -p 8000:8000 conduction-lens-demo   # open http://localhost:8000
+
+# Stage 1: build the Next.js static export (out/).
+FROM node:22-slim AS ui
+WORKDIR /ui
+COPY ui/package.json ui/package-lock.json ./
+RUN npm ci
+COPY ui/ ./
+RUN npm run build
+
+# Stage 2: Python API that also serves the static UI.
+FROM python:3.11-slim-bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 libglib2.0-0 libxrender1 libxext6 libsm6 build-essential python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+WORKDIR /app
+ENV UV_LINK_MODE=copy PYTHONPATH=/app/src
+COPY pyproject.toml uv.lock ./
+COPY packages/ ./packages/
+RUN uv sync --frozen --no-dev --no-install-project 2>/dev/null || uv sync --no-dev --no-install-project
+COPY src/ ./src/
+COPY --from=ui /ui/out ./ui/out
+# The Contract-B artifact the API serves (the UI also bundled it at build via ui/mock/results.json).
+COPY ui/mock/results.json ./outputs/results.json
+ARG GIT_SHA=unknown
+ENV GIT_SHA=$GIT_SHA UI_DIR=/app/ui/out ECG_ARTIFACT=/app/outputs/results.json
+EXPOSE 8000
+CMD ["uv", "run", "uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,0 +1,23 @@
+"""conduction_lens: amortized + calibrated Purkinje conduction identifiability from the ECG.
+
+An installable, CLI-driven wrapper over the science modules in `src/` (core, sim, calib): it
+runs the full pipeline (sweep -> NPE + conformal -> Contract-B artifact) with config, logging,
+a run manifest, and resumable per-stage artifacts.
+
+Non-destructive layout (Jul 8): the proven science still lives under `src/` and is imported via
+the path bootstrap below; the physical consolidation into `conduction_lens/{core,sim,calib}` is
+a follow-up once no long sweep is mid-flight.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+# Bootstrap `src/` onto the path so `import core.*`, `import sim.*`, `import calib.*` resolve,
+# matching pytest's `pythonpath = ["src"]`. Idempotent.
+_SRC = Path(__file__).resolve().parents[1] / "src"
+if str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
+
+__version__ = "0.1.0"
