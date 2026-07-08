@@ -28,7 +28,7 @@ from pathlib import Path  # noqa: E402
 import numpy as np  # noqa: E402
 
 from core.features import extract_features  # noqa: E402
-from core.noise import add_waveform_noise  # noqa: E402
+from core.noise import add_waveform_noise_absolute  # noqa: E402
 from core.theta import sample_prior, to_dict  # noqa: E402
 from sim.forward import forward, load_geometry  # noqa: E402
 
@@ -41,23 +41,28 @@ def _init_worker() -> None:
 
 
 def _run_one(args):
-    theta_row, noise_frac, seed = args
+    theta_row, noise_sigma_mv, seed = args
     rng = np.random.default_rng(seed)
+    # FractalTree.grow_tree draws from the GLOBAL numpy RNG, so growth (and which draws fail)
+    # is otherwise nondeterministic across worker processes. Seed it per draw for a
+    # reproducible sweep and a defensible determinism claim.
+    np.random.seed(seed & 0xFFFFFFFF)
     try:
         ecg = forward(to_dict(theta_row), _GEOM)
     except Exception:  # tree growth out of domain, etc: reject this draw
         return None
     x_clean = extract_features(ecg)
-    x_noised = extract_features(add_waveform_noise(ecg, noise_frac, rng))
+    x_noised = extract_features(add_waveform_noise_absolute(ecg, noise_sigma_mv, rng))
     return theta_row, x_clean, x_noised
 
 
-def run_sweep(n: int, noise_frac: float, n_workers: int, seed: int = 0):
-    """Return (theta, x_clean, x_noised, n_drawn). theta is (m, 6), features (m, D), m<=n_drawn."""
+def run_sweep(n: int, noise_sigma_mv: float, n_workers: int, seed: int = 0):
+    """Return (theta, x_clean, x_noised, n_drawn); features (m, D), m<=n_drawn.
+    noise_sigma_mv is the Contract D absolute waveform sigma (mV)."""
     rng = np.random.default_rng(seed)
     n_draw = int(np.ceil(n / 0.85))  # oversample for the ~12-15% growth-failure rate
     thetas = sample_prior(n_draw, rng)
-    args = [(thetas[i], noise_frac, seed + 1000 + i) for i in range(n_draw)]
+    args = [(thetas[i], noise_sigma_mv, seed + 1000 + i) for i in range(n_draw)]
 
     if n_workers > 1:
         with ProcessPoolExecutor(max_workers=n_workers, initializer=_init_worker) as ex:
@@ -75,7 +80,7 @@ def run_sweep(n: int, noise_frac: float, n_workers: int, seed: int = 0):
 
 def run_sweep_checkpointed(
     n: int,
-    noise_frac: float,
+    noise_sigma_mv: float,
     n_workers: int,
     seed: int = 0,
     checkpoint_path: str | Path | None = None,
@@ -117,7 +122,9 @@ def run_sweep_checkpointed(
     todo = [i for i in range(n_draw) if i not in done]
     if todo and len(th_ok) < n:
         with ProcessPoolExecutor(max_workers=n_workers, initializer=_init_worker) as ex:
-            futs = {ex.submit(_run_one, (thetas[i], noise_frac, seed + 1000 + i)): i for i in todo}
+            futs = {
+                ex.submit(_run_one, (thetas[i], noise_sigma_mv, seed + 1000 + i)): i for i in todo
+            }
             completed = 0
             for fut in as_completed(futs):
                 done.add(futs[fut])

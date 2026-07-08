@@ -1,8 +1,14 @@
-"""Contract A (provisional): the 6D conduction parameter vector theta.
+"""Contract A: the conduction parameter vector theta (frozen 6D box here; cv_myo is the
+7th param, added when the forward exposes it).
 
-Ranges here are PROVISIONAL and literature-ballpark, flagged UNVERIFIED. They are
-deliberately NOT the thesis BOECGParameter bounds (open eligibility question, brief
-section 8). Freeze on Thu with director sign-off after the forward-sensitivity probe.
+Ranges are the FROZEN Contract A box (director-approved, see .localagent/FREEZE_AND_PLAN.md
+and docs/priors.md), arrived at independently of the thesis BOECGParameter bounds (brief
+section 8). Sourced anchors: cv (Maguy 2009 Purkinje CV), branch_angle / w (Sahli Costabal
+2015 + Tanikella 2025), init_length labeled OUR modeling choice (Tanikella fixed 50 mm, LV).
+delta_iv is the dyssynchrony regime; its lower bound [-90] is PROVENANCE-PENDING (Research
+P0 sourcing a BBB/CRT interventricular-delay range), so the delta_iv contraction is not a
+public claim until sourced. delta_iv is a RELATIVE LV-RV delay only (absolute timing is
+normalized away in the ECG synthesis); it does not reproduce a real ECG on its own.
 
 Canonical order is THETA_NAMES; serialize keyed by name, never by position.
 """
@@ -20,14 +26,15 @@ THETA_NAMES: tuple[str, ...] = (
     "w",  # branch-divergence weight / PMJ spread (diffuse)
 )
 
-# name -> (lo, hi). PROVISIONAL / UNVERIFIED, centered near the crtdemo paper preset.
+# name -> (lo, hi). FROZEN Contract A 6D box (cv_myo fixed at 0.67 until the forward
+# exposes it as a 7th inferred param). delta_iv lower bound provenance-pending (see note).
 PRIOR_BOUNDS: dict[str, tuple[float, float]] = {
-    "cv": (1.5, 4.0),
-    "delta_iv": (-40.0, 40.0),
-    "init_length_lv": (15.0, 45.0),
-    "init_length_rv": (45.0, 95.0),
-    "branch_angle": (0.05, 0.40),
-    "w": (0.0, 0.25),
+    "cv": (1.5, 3.5),
+    "delta_iv": (-90.0, 40.0),
+    "init_length_lv": (30.0, 60.0),
+    "init_length_rv": (30.0, 60.0),
+    "branch_angle": (0.10, 0.30),
+    "w": (0.05, 0.20),
 }
 
 

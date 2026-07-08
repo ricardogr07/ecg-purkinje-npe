@@ -29,18 +29,24 @@ from sbi.inference import NPE  # noqa: E402
 from sbi.utils import BoxUniform  # noqa: E402
 
 from calib.diagnostics import run_sbc_check, run_tarp_check  # noqa: E402
-from core.noise import DEFAULT_NOISE_FRAC  # noqa: E402
+from core.noise import DEFAULT_WAVEFORM_SIGMA_MV  # noqa: E402
 from core.theta import PRIOR_BOUNDS, THETA_NAMES  # noqa: E402
 from sim.sweep import run_sweep_checkpointed  # noqa: E402
 
 DRY = bool(int(os.getenv("DRY", "0")))
+# Budget + artifact names are env-overridable so the same harness drives the day-2 smoke
+# and the frozen 6D/7D overnight runs into separate checkpoints (no clobber).
+N_TRAIN = int(os.getenv("N_TRAIN", "1000"))
+N_CALIB = int(os.getenv("N_CALIB", "250"))
+N_POST, N_OBS = 200, 20
 if DRY:
-    N_TRAIN, N_CALIB, BUDGETS, N_POST, N_OBS = 24, 12, [12, 24], 30, 5
-else:
-    N_TRAIN, N_CALIB, BUDGETS, N_POST, N_OBS = 1000, 250, [250, 500, 1000], 200, 20
+    N_TRAIN, N_CALIB, N_POST, N_OBS = 24, 12, 30, 5
+BUDGETS = sorted({max(1, N_TRAIN // 4), N_TRAIN // 2, N_TRAIN})
 
 OUT = Path(__file__).resolve().parents[1] / "outputs"
-RESULTS = OUT / "day2_results.txt"
+TAG = os.getenv("SNAPSHOT_TAG", "day2")
+CKPT_NAME = os.getenv("CKPT_NAME", "day2_sweep_ckpt.npz")
+RESULTS = OUT / f"{TAG}_results.txt"
 _LO = np.array([PRIOR_BOUNDS[k][0] for k in THETA_NAMES], dtype=np.float32)
 _HI = np.array([PRIOR_BOUNDS[k][1] for k in THETA_NAMES], dtype=np.float32)
 
@@ -76,10 +82,10 @@ def main() -> None:
     torch.manual_seed(0)
     n_workers = min(os.cpu_count() or 2, 8)
 
-    ckpt = None if DRY else OUT / "day2_sweep_ckpt.npz"
+    ckpt = None if DRY else OUT / CKPT_NAME
     t = time.perf_counter()
     theta, _xc, x, n_done = run_sweep_checkpointed(
-        N_TRAIN + N_CALIB, DEFAULT_NOISE_FRAC, n_workers, seed=0, checkpoint_path=ckpt
+        N_TRAIN + N_CALIB, DEFAULT_WAVEFORM_SIGMA_MV, n_workers, seed=0, checkpoint_path=ckpt
     )
     emit(f"[sweep] {theta.shape[0]} usable ({n_done} draws) in {time.perf_counter() - t:.0f}s")
 
@@ -121,8 +127,8 @@ def main() -> None:
         labels=list(THETA_NAMES),
         limits=list(zip(_LO.tolist(), _HI.tolist(), strict=False)),
     )
-    fig.savefig(OUT / "day2_corner.png", dpi=110, bbox_inches="tight")
-    print(f"[figure] {OUT / 'day2_corner.png'}")
+    fig.savefig(OUT / f"{TAG}_corner.png", dpi=110, bbox_inches="tight")
+    print(f"[figure] {OUT / f'{TAG}_corner.png'}")
 
     # --- calibration: SBC + TARP coverage ---
     try:
@@ -134,8 +140,8 @@ def main() -> None:
             ax.set_title(THETA_NAMES[i], fontsize=7)
             ax.set_yticks([])
         fig.suptitle(f"SBC rank histograms (flat = calibrated), N={th_ca.shape[0]}")
-        fig.savefig(OUT / "day2_sbc.png", dpi=110, bbox_inches="tight")
-        print(f"[figure] {OUT / 'day2_sbc.png'}")
+        fig.savefig(OUT / f"{TAG}_sbc.png", dpi=110, bbox_inches="tight")
+        print(f"[figure] {OUT / f'{TAG}_sbc.png'}")
     except Exception as e:
         print(f"[SBC] skipped: {type(e).__name__}: {e}")
 
@@ -148,8 +154,8 @@ def main() -> None:
         plt.xlabel("credibility level")
         plt.ylabel("expected coverage")
         plt.title(f"TARP coverage (ATC={tarp['atc']:+.3f})")
-        plt.savefig(OUT / "day2_tarp.png", dpi=110, bbox_inches="tight")
-        print(f"[figure] {OUT / 'day2_tarp.png'}")
+        plt.savefig(OUT / f"{TAG}_tarp.png", dpi=110, bbox_inches="tight")
+        print(f"[figure] {OUT / f'{TAG}_tarp.png'}")
     except Exception as e:
         print(f"[TARP] skipped: {type(e).__name__}: {e}")
 
@@ -162,8 +168,8 @@ def main() -> None:
     plt.ylabel("median contraction")
     plt.title("Contraction vs budget (flattening = enough sims)")
     plt.legend(fontsize=7)
-    plt.savefig(OUT / "day2_budget_curve.png", dpi=110, bbox_inches="tight")
-    print(f"[figure] {OUT / 'day2_budget_curve.png'}")
+    plt.savefig(OUT / f"{TAG}_budget_curve.png", dpi=110, bbox_inches="tight")
+    print(f"[figure] {OUT / f'{TAG}_budget_curve.png'}")
     print("\n[ok] snapshot complete")
 
 

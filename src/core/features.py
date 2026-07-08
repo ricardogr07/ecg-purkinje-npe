@@ -16,6 +16,16 @@ FEATURE_NAMES: tuple[str, ...] = (
     "time_to_peak_frac",  # argmax of the RSS / T
 )
 
+# Contract D feature typing (for the feature-channel noise: "amp" ~0.05 mV, "time" ~5 ms).
+# This run injects noise at the WAVEFORM before extraction, so this is for the later
+# feature-level mode; the two fractional timing features would need scaling by T to take ms.
+FEATURE_KINDS: tuple[str, ...] = (
+    *("amp",) * 12,  # p2p per lead (mV)
+    "time",  # qrs_active_frac
+    "amp",  # vecmag_peak (mV)
+    "time",  # time_to_peak_frac
+)
+
 
 def _vector_magnitude(ecg: np.ndarray) -> np.ndarray:
     return np.sqrt((ecg**2).sum(axis=0))

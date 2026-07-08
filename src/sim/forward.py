@@ -30,14 +30,24 @@ _LENGTH = 8.0
 _L_SEGMENT = 1.0
 _N_IT = 20
 
-# A theta point known to grow cleanly on crtdemo (the paper preset). delta_iv=0.
+# Representative in-prior reference at the frozen Contract A nominals (dyssynchrony regime).
+# NOT claimed to reproduce True_ecg: delta_iv is a RELATIVE LV-RV delay (absolute timing is
+# normalized away) and the forward has a known fidelity gap vs the real ECG. This is a
+# display / SBC sanity point; growth is verified in Stage 0.
+# Best in-box operating point for crtdemo, estimated from the STORED True Purkinje trees
+# (True_LVtree/RVtree.vtu arrival times), NOT fitted to True_ecg and NOT the literature
+# nominals: True Purkinje CV ~1.4 m/s (frozen floor 1.5 brackets it at the edge), LV-RV
+# relative delay ~-75 ms, init_length ~35/55 mm. At these values the forward reaches
+# corr ~0.75 with amplitude ratios ~1 (the remaining gap is cv_myo, not yet exposed).
+# Used only for the fidelity table / demo, never in the SBC study (which draws truths from
+# the prior). il_rv=50 is skipped: it hits a fractal-tree projection failure with these seeds.
 REFERENCE_THETA: dict[str, float] = {
-    "cv": 2.0,
-    "delta_iv": 0.0,
-    "init_length_lv": 35.931537038275316,
-    "init_length_rv": 79.86354832236707,
-    "branch_angle": 0.15,
-    "w": 0.1,
+    "cv": 1.5,
+    "delta_iv": -75.0,
+    "init_length_lv": 35.0,
+    "init_length_rv": 55.0,
+    "branch_angle": 0.175,
+    "w": 0.10,
 }
 
 
