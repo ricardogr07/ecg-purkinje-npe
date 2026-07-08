@@ -73,7 +73,13 @@ def _build_tree(meshfile, seeds, init_len, fas_len, fas_ang, branch_angle, w) ->
     )
 
 
-def forward(theta: dict[str, float], geom: MyocardialMesh, kmax: int = 2) -> np.ndarray:
+def forward(
+    theta: dict[str, float],
+    geom: MyocardialMesh,
+    kmax: int = 2,
+    seeds_lv: tuple[int, int] = _LV_SEEDS,
+    seeds_rv: tuple[int, int] = _RV_SEEDS,
+) -> np.ndarray:
     """Map a theta dict to a 12-lead ECG as a (12, T) float array on crtdemo.
 
     Perf: kmax=2 is the converged setting for crtdemo (the 3rd coupling iteration changes
@@ -83,10 +89,13 @@ def forward(theta: dict[str, float], geom: MyocardialMesh, kmax: int = 2) -> np.
     delta_iv convention: LV root at 0 ms, RV root delayed by delta_iv ms. Only the
     LV-RV relative delay is encoded; the absolute time shift is intentionally not a
     parameter (it is unidentifiable under shift-invariant ECG features).
+
+    seeds_lv / seeds_rv are the (init_node_id, second_node_id) endocardial root nodes; varying
+    them (at fixed theta) yields a genuinely different Purkinje network (topology axis).
     """
     lv = _build_tree(
         DATA_DIR / "crtdemo_LVendo_heart_cut.obj",
-        _LV_SEEDS,
+        seeds_lv,
         theta["init_length_lv"],
         _LV_FAS_LEN,
         _LV_FAS_ANG,
@@ -95,7 +104,7 @@ def forward(theta: dict[str, float], geom: MyocardialMesh, kmax: int = 2) -> np.
     )
     rv = _build_tree(
         DATA_DIR / "crtdemo_RVendo_heart_cut.obj",
-        _RV_SEEDS,
+        seeds_rv,
         theta["init_length_rv"],
         _RV_FAS_LEN,
         _RV_FAS_ANG,
@@ -118,3 +127,32 @@ def forward(theta: dict[str, float], geom: MyocardialMesh, kmax: int = 2) -> np.
     )
     # run_ecg_core returns a structured (record) array of 12 named leads.
     return np.vstack([np.asarray(ecg[name], dtype=float) for name in ecg.dtype.names])
+
+
+# Endocardial mesh paths, exposed so experiments can sample network seeds on them.
+LV_ENDO = DATA_DIR / "crtdemo_LVendo_heart_cut.obj"
+RV_ENDO = DATA_DIR / "crtdemo_RVendo_heart_cut.obj"
+
+
+def _endo_points(meshfile) -> np.ndarray:
+    import pyvista as pv
+
+    return np.asarray(pv.read(str(meshfile)).points, dtype=float)
+
+
+def sample_valid_seeds(meshfile, n: int, rng: np.random.Generator) -> list[tuple[int, int]]:
+    """Sample n (init_node_id, second_node_id) endocardial root pairs for tree growth.
+
+    second is init's nearest distinct vertex, so the initial branch is a short valid step
+    along the surface. Varying these at fixed theta yields distinct Purkinje networks.
+    """
+    from scipy.spatial import cKDTree
+
+    pts = _endo_points(meshfile)
+    tree = cKDTree(pts)
+    idx = rng.integers(0, pts.shape[0], size=n)
+    seeds: list[tuple[int, int]] = []
+    for i in idx:
+        _, nn = tree.query(pts[int(i)], k=2)
+        seeds.append((int(i), int(nn[1])))
+    return seeds
