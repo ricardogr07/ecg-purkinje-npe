@@ -28,7 +28,7 @@ from pathlib import Path  # noqa: E402
 import numpy as np  # noqa: E402
 
 from core.features import extract_features  # noqa: E402
-from core.noise import add_waveform_noise_absolute  # noqa: E402
+from core.noise import add_waveform_noise_absolute, to_physiological_mv  # noqa: E402
 from core.theta import sample_prior, to_dict  # noqa: E402
 from sim.forward import forward, load_geometry  # noqa: E402
 
@@ -51,6 +51,7 @@ def _run_one(args):
         ecg = forward(to_dict(theta_row), _GEOM)
     except Exception:  # tree growth out of domain, etc: reject this draw
         return None
+    ecg = to_physiological_mv(ecg)  # calibrate to physiological mV so the 0.025 mV noise is real
     x_clean = extract_features(ecg)
     x_noised = extract_features(add_waveform_noise_absolute(ecg, noise_sigma_mv, rng))
     return theta_row, x_clean, x_noised

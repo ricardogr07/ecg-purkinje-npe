@@ -142,7 +142,7 @@ def main() -> None:
 
         geom = load_geometry()
         cv_myo_fixed = float(geom._cv_fiber_base) if ncol < 7 else None
-        input_ecg = np.asarray(forward(obs_theta, geom), float)  # (12, T)
+        input_ecg = to_physiological_mv(np.asarray(forward(obs_theta, geom), float))  # (12, T) mV
         x_obs = extract_features(input_ecg)
         true_theta = dict(obs_theta)
     else:
@@ -163,12 +163,18 @@ def main() -> None:
     if EMIT_ECG and PPC_N > 0:
         from sim.forward import forward as _fwd
 
-        sig = np.asarray(_fwd({k: float(mean[i]) for i, k in enumerate(names)}, geom), float)
+        sig = to_physiological_mv(
+            np.asarray(_fwd({k: float(mean[i]) for i, k in enumerate(names)}, geom), float)
+        )
         band = []
         for row in samples[np.random.default_rng(0).integers(0, samples.shape[0], PPC_N)]:
             try:
                 band.append(
-                    np.asarray(_fwd({k: float(row[i]) for i, k in enumerate(names)}, geom), float)
+                    to_physiological_mv(
+                        np.asarray(
+                            _fwd({k: float(row[i]) for i, k in enumerate(names)}, geom), float
+                        )
+                    )
                 )
             except Exception:
                 continue

@@ -28,9 +28,10 @@ THETA_NAMES: tuple[str, ...] = (
 )
 
 # name -> (lo, hi). FROZEN Contract A 7D box. cv_myo is inferred over [0.5, 1.0] (Fu 2024);
-# delta_iv lower bound provenance-pending (see note).
+# delta_iv lower bound provenance-pending (see note). cv floor lowered 1.5 -> 1.3 (director Jul 8):
+# the crtdemo true Purkinje CV ~1.4 sat at the old floor, so [1.3, 3.5] brackets it interior.
 PRIOR_BOUNDS: dict[str, tuple[float, float]] = {
-    "cv": (1.5, 3.5),
+    "cv": (1.3, 3.5),
     "delta_iv": (-90.0, 40.0),
     "init_length_lv": (30.0, 60.0),
     "init_length_rv": (30.0, 60.0),

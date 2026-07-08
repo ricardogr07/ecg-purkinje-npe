@@ -22,6 +22,23 @@ import numpy as np
 # Contract D frozen waveform sigma (mV).
 DEFAULT_WAVEFORM_SIGMA_MV = 0.025
 
+# Physiological-mV calibration (director Jul 8). The lead-field synthesis emits uncalibrated
+# pseudo-mV: forward(REFERENCE_THETA) peaks ~73 mV, while a real 12-lead QRS peaks ~1.5 mV. Left
+# uncalibrated, the 0.025 mV Contract D noise is ~3000x below the signal (near-noiseless), which
+# flatters identifiability. Scaling the forward ECG to physiological mV BEFORE adding the (sourced,
+# real-mV) 0.025 mV noise makes the SNR physiological (~60). Contract D (the noise) is unchanged;
+# this is a forward units-calibration applied identically in training, calibration, and the demo.
+# Amplitude ratios (fidelity) are scale-invariant, so the fidelity table is unaffected.
+REFERENCE_QRS_PEAK_MV = 73.1  # measured peak of forward(REFERENCE_THETA), pseudo-mV
+TARGET_QRS_PEAK_MV = 1.5  # physiological 12-lead QRS peak
+ECG_MV_SCALE = TARGET_QRS_PEAK_MV / REFERENCE_QRS_PEAK_MV  # ~0.0205
+
+
+def to_physiological_mv(ecg: np.ndarray) -> np.ndarray:
+    """Scale a raw (pseudo-mV) forward ECG to physiological mV (see ECG_MV_SCALE)."""
+    return np.asarray(ecg, dtype=float) * ECG_MV_SCALE
+
+
 # Retired day-1 relative model, kept for the historical day-1 smoke only.
 DEFAULT_NOISE_FRAC = 0.05
 
