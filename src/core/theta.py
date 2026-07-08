@@ -1,5 +1,5 @@
-"""Contract A: the conduction parameter vector theta (frozen 6D box here; cv_myo is the
-7th param, added when the forward exposes it).
+"""Contract A: the conduction parameter vector theta (frozen 7D box; cv_myo is the 7th,
+inferred param, exposed as a forward input via MyocardialMesh.set_fiber_cv).
 
 Ranges are the FROZEN Contract A box (director-approved, see .localagent/FREEZE_AND_PLAN.md
 and docs/priors.md), arrived at independently of the thesis BOECGParameter bounds (brief
@@ -24,10 +24,11 @@ THETA_NAMES: tuple[str, ...] = (
     "init_length_rv",  # RV early-activation extent, mm
     "branch_angle",  # inter-branch angle, rad (diffuse)
     "w",  # branch-divergence weight / PMJ spread (diffuse)
+    "cv_myo",  # myocardial conduction velocity, m/s (constraint) -> QRS amplitude/width
 )
 
-# name -> (lo, hi). FROZEN Contract A 6D box (cv_myo fixed at 0.67 until the forward
-# exposes it as a 7th inferred param). delta_iv lower bound provenance-pending (see note).
+# name -> (lo, hi). FROZEN Contract A 7D box. cv_myo is inferred over [0.5, 1.0] (Fu 2024);
+# delta_iv lower bound provenance-pending (see note).
 PRIOR_BOUNDS: dict[str, tuple[float, float]] = {
     "cv": (1.5, 3.5),
     "delta_iv": (-90.0, 40.0),
@@ -35,11 +36,12 @@ PRIOR_BOUNDS: dict[str, tuple[float, float]] = {
     "init_length_rv": (30.0, 60.0),
     "branch_angle": (0.10, 0.30),
     "w": (0.05, 0.20),
+    "cv_myo": (0.5, 1.0),
 }
 
 
 def sample_prior(n: int, rng: np.random.Generator) -> np.ndarray:
-    """Draw n theta rows uniformly from PRIOR_BOUNDS. Returns (n, 6) in THETA_NAMES order."""
+    """Draw n theta rows uniformly from PRIOR_BOUNDS. Returns (n, 7) in THETA_NAMES order."""
     lo = np.array([PRIOR_BOUNDS[k][0] for k in THETA_NAMES])
     hi = np.array([PRIOR_BOUNDS[k][1] for k in THETA_NAMES])
     return lo + rng.uniform(size=(n, len(THETA_NAMES))) * (hi - lo)
