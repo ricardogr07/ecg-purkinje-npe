@@ -10,6 +10,7 @@ dependencies = [
     "purkinje-uv",
     "myocardial-mesh",
     "sbi",
+    "torch",
     "numpy",
     "matplotlib",
     "fastapi",
@@ -24,6 +25,14 @@ dependencies = [
 purkinje-uv = { path = "packages/purkinje-uv", editable = true }
 myocardial-mesh = { path = "packages/myocardial-mesh", editable = true }
 jaxbo = { path = "packages/jax-bo", editable = true }
+# CPU-only torch: the default wheels pull ~5 GB of nvidia CUDA deps into our CPU-only image (and
+# hit a cudnn hash mismatch on Linux). Pin torch to the PyTorch CPU index for a lean, buildable image.
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [dependency-groups]
 dev = [
