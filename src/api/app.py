@@ -10,9 +10,12 @@ Served in one nginx + uvicorn task; the frontend is same-origin so no CORS is co
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import artifact
@@ -52,6 +55,4 @@ def geometry(geometry_id: str) -> dict[str, Any]:
 # Mounted last so the API routes above win; absent in the CLI image and in tests (no UI_DIR).
 _ui_dir = os.environ.get("UI_DIR")
 if _ui_dir and Path(_ui_dir).is_dir():
-    from fastapi.staticfiles import StaticFiles
-
     app.mount("/", StaticFiles(directory=_ui_dir, html=True), name="ui")
