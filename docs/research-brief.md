@@ -257,7 +257,7 @@ The serialization keys are the code names already wired into `src/core/theta.py`
 
 | code name (canonical) | alias | unit | [lo, hi] | nominal | kind | primary source |
 |---|---|---|---|---|---|---|
-| `cv` | CV_pk | m/s | [1.5, 3.5] | 2.2 | measured | Maguy 2009 (control 2.2 m/s, 1.5 in CHF); textbook 2 to 4 |
+| `cv` | CV_pk | m/s | [1.3, 3.5] | 2.2 | measured | Maguy 2009 (control 2.2 m/s, 1.5 in CHF); floor lowered 1.5 -> 1.3 (Jul 8) to bracket crtdemo true ~1.4 interior |
 | `delta_iv` | dIV | ms | [-90, 40] (dyssynchrony + paced box) | ~-75 (crtdemo ref) | measured envelope + our box | Gold 2018 (measured LBBB RV-LV 77 +/- 38 ms, PMID 30354310); Burri 2005 (VV pacing +/- 40 ms, PMID 16171751); Durrer 1970 (normal, PMID 5482907). See "delta_iv provenance" below. |
 | `init_length_lv` | L0_LV | mm | [30, 60] | 50 | model | OUR choice: Tanikella fixed 50 mm (LV only, not swept); the range + LV/RV split are ours |
 | `init_length_rv` | L0_RV | mm | [30, 60] | 50 | model | OUR choice (see init_length_lv) |
