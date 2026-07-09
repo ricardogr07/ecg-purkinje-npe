@@ -48,7 +48,6 @@ credentials.json
 # Local-only orchestration and strategy
 .localagent/
 .claude/
-.claude_research/
 
 # transient FUSE temp files
 .fuse_hidden*
@@ -61,4 +60,4 @@ credentials.json
 
 # Research lane working notes (internal, like .claude and .localagent)
 .claude_research/
-contract_b.json
+/contract_b.json
