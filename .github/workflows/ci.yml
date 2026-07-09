@@ -2,7 +2,7 @@ name: ci
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, "science/**"]
   pull_request:
 
 jobs:
@@ -13,6 +13,21 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.11"
+          enable-cache: true
       - run: uv sync --group dev
       - run: uv run ruff check .
-      - run: uv run pytest -q
+      # Default suite; sim-heavy tests are gated behind RUN_SLOW (see tests/conftest.py).
+      - run: uv run pytest -q --cov=src --cov=conduction_lens --cov-report=term-missing
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build CLI / pipeline image
+        run: docker build -f Dockerfile.cli --build-arg GIT_SHA=${GITHUB_SHA::7} -t conduction-lens:ci .
+      # The demo image bakes a Contract-B artifact at repo root; the real one lives in gitignored
+      # outputs/, so stage a minimal placeholder for the build-only check (image is not run here).
+      - name: Stage placeholder Contract-B for the demo image
+        run: printf '{}' > contract_b.json
+      - name: Build demo server image
+        run: docker build -f Dockerfile.demo --build-arg GIT_SHA=${GITHUB_SHA::7} -t conduction-lens-demo:ci .
