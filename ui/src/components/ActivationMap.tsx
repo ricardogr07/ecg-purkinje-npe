@@ -26,11 +26,14 @@ export default function ActivationMap() {
   const [playing, setPlaying] = useState(false);
   const [rotating, setRotating] = useState(true);
   const [sweepPct, setSweepPct] = useState(100);
+  const [showPk, setShowPk] = useState(true);
+  const showPkRef = useRef(true);
 
   const verts = geometry?.vertices;
   const faces = geometry?.faces;
   const lat = results.activation_map?.values;
   const chamber = geometry?.chamber;
+  const purk = geometry?.purkinje;
 
   const hasGeom = !!(verts?.length && faces?.length);
   const hasLat = !!(lat?.length && lat.length === verts?.length);
@@ -77,6 +80,28 @@ export default function ActivationMap() {
     const sz = new Float32Array(V.length);
     const order = new Uint32Array(F.length);
     const fdepth = new Float32Array(F.length);
+
+    // Purkinje network (real LV + RV fractal trees, same coord frame as the surface). Flatten
+    // both trees into one node list + an edge list tagged by chamber, projected each frame.
+    const pkNodes: [number, number, number][] = [];
+    const pkEdges: [number, number][] = [];
+    const pkRv: boolean[] = [];
+    if (purk) {
+      for (const [tree, isRv] of [
+        [purk.lv, false] as const,
+        [purk.rv, true] as const,
+      ]) {
+        const off = pkNodes.length;
+        for (const n of tree.nodes) pkNodes.push(n);
+        for (const [a, b] of tree.edges) {
+          pkEdges.push([off + a, off + b]);
+          pkRv.push(isRv);
+        }
+      }
+    }
+    const pkx = new Float32Array(pkNodes.length);
+    const pky = new Float32Array(pkNodes.length);
+    const pkz = new Float32Array(pkNodes.length);
 
     let raf = 0;
     let frame = 0;
@@ -190,6 +215,34 @@ export default function ActivationMap() {
         ctx.closePath();
         ctx.fill();
       }
+
+      // Purkinje network overlay: project the tree nodes with the same transform, draw the edges
+      // with a depth fade (front branches brighter). LV cyan, RV amber.
+      if (showPkRef.current && pkEdges.length) {
+        for (let i = 0; i < pkNodes.length; i++) {
+          const px = pkNodes[i][0] - cx;
+          const py = pkNodes[i][1] - cy;
+          const pz = pkNodes[i][2] - cz;
+          const x1 = px * ca - py * sa;
+          const y1 = px * sa + py * ca;
+          const y2 = y1 * ctil - pz * st;
+          const z2 = y1 * st + pz * ctil;
+          pkx[i] = ox + x1 * fit;
+          pky[i] = oy + y2 * fit;
+          pkz[i] = z2;
+        }
+        ctx.lineWidth = 1;
+        for (let e = 0; e < pkEdges.length; e++) {
+          const [a, b] = pkEdges[e];
+          const depth = Math.max(0, Math.min(1, ((pkz[a] + pkz[b]) / 2 + radius) / (2 * radius)));
+          const alpha = 0.12 + 0.65 * depth;
+          ctx.strokeStyle = pkRv[e] ? `rgba(255,176,80,${alpha})` : `rgba(110,220,255,${alpha})`;
+          ctx.beginPath();
+          ctx.moveTo(pkx[a], pky[a]);
+          ctx.lineTo(pkx[b], pky[b]);
+          ctx.stroke();
+        }
+      }
     }
 
     function tick() {
@@ -250,6 +303,10 @@ export default function ActivationMap() {
     rotatingRef.current = !rotatingRef.current;
     setRotating(rotatingRef.current);
   }
+  function togglePk() {
+    showPkRef.current = !showPkRef.current;
+    setShowPk(showPkRef.current);
+  }
 
   return (
     <div>
@@ -305,7 +362,25 @@ export default function ActivationMap() {
         >
           {rotating ? "Stop spin" : "Spin"}
         </button>
+        {purk ? (
+          <button
+            onClick={togglePk}
+            className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800"
+            aria-pressed={showPk}
+          >
+            {showPk ? "Hide Purkinje" : "Show Purkinje"}
+          </button>
+        ) : null}
       </div>
+
+      {purk ? (
+        <p className="mt-2 text-[11px] text-zinc-500">
+          <span className="text-cyan-300">LV</span> and <span className="text-amber-300">RV</span>{" "}
+          fractal Purkinje networks (the real trees that seed this activation:{" "}
+          {purk.lv.nodes.length + purk.rv.nodes.length} nodes,{" "}
+          {(purk.lv.n_pmj ?? 0) + (purk.rv.n_pmj ?? 0)} Purkinje-muscle junctions).
+        </p>
+      ) : null}
 
       {/* colorbar */}
       {hasLat ? (

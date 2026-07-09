@@ -6,8 +6,11 @@
 // treats optional blocks as possibly-missing, so a leaner real artifact degrades
 // gracefully rather than crashing.
 
-import rawResults from "@mock/results.json";
-import rawGeometry from "@mock/geometry.json";
+// The activation scene (surface + LAT + Purkinje network) and the ECG are REAL, exported from the
+// forward at the honest operating point (experiments/export_geometry.py). The posterior/calibration
+// panels still read the illustrative mock (see the Header banner). meta.activation_is_real marks it.
+import rawGeometry from "@mock/geometry.real.json";
+import rawResults from "@mock/results.real.json";
 
 export type ParamKey =
   | "cv"
@@ -79,6 +82,12 @@ export interface ResultsArtifact {
   meta?: Record<string, unknown>;
 }
 
+export interface PurkinjeTree {
+  nodes: [number, number, number][];
+  edges: [number, number][];
+  n_pmj?: number;
+}
+
 export interface Geometry {
   geometry_id: string;
   units?: string;
@@ -88,6 +97,7 @@ export interface Geometry {
   vertices: [number, number, number][];
   faces: [number, number, number][];
   chamber?: number[]; // per-vertex chamber index
+  purkinje?: { lv: PurkinjeTree; rv: PurkinjeTree }; // the real fractal Purkinje network
 }
 
 export const results = rawResults as unknown as ResultsArtifact;
