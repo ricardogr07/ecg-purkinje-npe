@@ -1,8 +1,8 @@
 """Pipeline orchestration: sweep -> (NPE + conformal + Contract-B) with resumable artifacts.
 
 Each stage writes into the run dir and is skip-if-exists, so a crash resumes. Reuses the proven
-science: `sim.sweep.run_sweep_checkpointed` for the sweep, and `experiments/emit_contract_b.py`
-for the NPE + per-parameter conformal + Contract-B artifact (run as a subprocess stage).
+science: `sim.sweep.run_sweep_checkpointed` for the sweep, and `npe.emit.emit_contract_b` for the
+NPE + per-parameter conformal + Contract-B artifact (called directly, in-process).
 """
 
 from __future__ import annotations
@@ -108,24 +108,17 @@ def run(cfg: RunConfig) -> Path:
     else:
         n_calib = min(500, max(10, budget // 5))
         n_train = max(10, budget - n_calib)
-        # DRY stays 0 so the emitter honors our explicit train/calib split (its DRY branch would
-        # force 60/20, mismatching a small --dry-run budget); the small budget already shrinks it.
-        env = dict(
-            os.environ,
-            CKPT_PATH=str(sweep_npz),
-            OUT_JSON=str(results),
-            EMIT_ECG="1",
-            PPC_N=str(ppc),
-            N_TRAIN=str(n_train),
-            N_CALIB=str(n_calib),
-            DRY="0",
-        )
+        from npe.emit import emit_contract_b
+
         log.info(f"[report] training NPE + conformal + emitting Contract-B -> {results}")
-        r = subprocess.run(
-            [sys.executable, str(_REPO / "experiments" / "emit_contract_b.py")], env=env, cwd=_REPO
+        emit_contract_b(
+            str(sweep_npz),
+            str(results),
+            emit_ecg=True,
+            ppc_n=ppc,
+            n_train=n_train,
+            n_calib=n_calib,
         )
-        if r.returncode != 0:
-            raise SystemExit(f"[report] emit stage failed (exit {r.returncode})")
 
     log.info(f"[done] run artifacts in {out}: sweep.npz, results.json, run_manifest.json, run.log")
     report(str(out))
