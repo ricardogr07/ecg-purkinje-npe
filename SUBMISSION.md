@@ -17,6 +17,13 @@ signal-to-noise error. That self-correction record, backed by a public verificat
 ledger, is the methodological contribution. No real ECG appears; comparison against
 measured recordings is future work.
 
+## Setup (the operating point every claim is relative to)
+crtdemo geometry, fixed anatomy; a physiological-mV pseudo-ECG forward in an unbounded
+homogeneous volume conductor (Gima and Rudy 2002), ~1.4 mV peak; Contract D observation
+noise at sigma 0.025 mV; 5000 simulations; amortized NPE (sbi) with per-parameter
+conformal recalibration. Identifiability is reported relative to this stated noise floor,
+not as a property of a parameter in the abstract.
+
 ## Links (TODO before submit)
 - [ ] Demo URL (S3 static site, Saturday deploy)
 - [ ] GitHub repo (flipped public, Apache-2.0, Sunday)
