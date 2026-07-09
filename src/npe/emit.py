@@ -107,6 +107,7 @@ def emit_contract_b(
     n_calib: int = 250,
     n_post: int = 300,
     level: float = 0.9,
+    save_checkpoint_path=None,
 ) -> dict:
     """Train the NPE on a checkpoint, conformally recalibrate, and write a Contract-B JSON.
 
@@ -114,6 +115,9 @@ def emit_contract_b(
     out_json: destination path for the Contract-B artifact (also returned as a dict).
     emit_ecg: if True, the demo observation is forward(REFERENCE_THETA) (needs the sim stack);
     if False, a held-out calibration observation is used (fast, no geometry).
+    save_checkpoint_path: if given, also persist the trained posterior there via
+    ``npe.persist.save_posterior`` (writes ``<path>.pt`` + ``<path>.json``; portable, no
+    project-code pickling). Off by default so existing callers are unaffected.
     """
     ckpt = Path(ckpt_path)
     out_json = Path(out_json)
@@ -134,6 +138,11 @@ def emit_contract_b(
     prior_std = th_tr.std(axis=0)
 
     post = _train(th_tr, x_tr)
+    if save_checkpoint_path is not None:
+        from npe.persist import save_posterior
+
+        save_posterior(post, names, {k: _bounds(k) for k in names}, save_checkpoint_path)
+        print(f"[emit] wrote posterior checkpoint {save_checkpoint_path}", flush=True)
     sets = draw_sample_sets(post, x_ca, n_post)  # (M, N, ncol)
     t = fit_inflation(th_ca, sets)
     ks_before = sbc_ks_pvals(th_ca, sets, np.ones(ncol))

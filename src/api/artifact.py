@@ -23,21 +23,15 @@ from typing import Any
 
 import numpy as np
 
+from core.theta import PRIOR_BOUNDS as _CORE_PRIOR_BOUNDS
+from core.theta import THETA_NAMES
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
-# Frozen Contract A (7 params), duplicated here on purpose: the source of truth is
-# docs/contracts.md. Kept in sync with the frozen 7D box in src/core/theta.py (cv floor
-# lowered 1.5 -> 1.3 on Jul 8). ponytail: single small table; re-point at core.theta later.
-PRIOR_BOUNDS: dict[str, list[float]] = {
-    "cv": [1.3, 3.5],
-    "delta_iv": [-90.0, 40.0],
-    "init_length_lv": [30.0, 60.0],
-    "init_length_rv": [30.0, 60.0],
-    "branch_angle": [0.10, 0.30],
-    "w": [0.05, 0.20],
-    "cv_myo": [0.5, 1.0],
-}
-THETA_NAMES: list[str] = list(PRIOR_BOUNDS)
+# Frozen Contract A (7 params). Single source of truth is src/core/theta.py; re-pointed
+# here (was a duplicated table) so the cv floor / any future bound change never drifts
+# between the API and Science. list(...) values to match this module's prior JSON shape.
+PRIOR_BOUNDS: dict[str, list[float]] = {k: list(v) for k, v in _CORE_PRIOR_BOUNDS.items()}
 
 
 def git_sha() -> str:
