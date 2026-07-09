@@ -12,3 +12,8 @@
 next-env.d.ts
 .DS_Store
 .env*.local
+
+# design-sync (local tooling state, not part of the shipped app)
+/.ds-sync/
+/ds-bundle/
+/.design-sync/
