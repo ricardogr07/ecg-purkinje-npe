@@ -39,11 +39,15 @@ export interface Calibration {
   nominal_level?: number;
   n_sbc_ranks?: number;
   sbc_bins?: number;
-  sbc?: Record<string, { before: number[]; after: number[] }>;
+  // The Day-2 mock emits full rank-count histograms per param; the real emitter
+  // (src/npe/emit.py) emits a single per-param SBC KS p-value instead. Accept both
+  // shapes so the panel degrades to a numeric badge rather than crashing on `.reduce`.
+  sbc?: Record<string, { before: number[] | number; after: number[] | number }>;
   coverage_curve?: CoverageCurve;
-  sbc_ks_pvalue?: { before: number; after: number };
-  tarp_atc?: { before: number; after: number };
+  sbc_ks_pvalue?: { before: number; after: number } | number;
+  tarp_atc?: { before: number; after: number } | number;
   conformal_t?: Partial<Record<ParamKey, number>>;
+  note?: string;
 }
 
 export interface EcgBlock {

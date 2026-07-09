@@ -48,7 +48,7 @@ function Row({ s }: { s: ParamSummary }) {
       <div>
         {hasBar ? (
           <div
-            className="relative h-6 rounded-md bg-zinc-800/80 border border-zinc-700/60"
+            className="relative h-6 overflow-hidden rounded-md bg-zinc-800/80 border border-zinc-700/60"
             role="img"
             aria-label={`${s.meta.alias}: posterior 90% interval ${fmt(ci![0], s.meta.unit)} to ${fmt(ci![1], s.meta.unit)} ${s.meta.unit} within prior ${fmt(pr![0], s.meta.unit)} to ${fmt(pr![1], s.meta.unit)}`}
           >

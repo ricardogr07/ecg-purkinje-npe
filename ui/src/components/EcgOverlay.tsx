@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { results } from "@/lib/artifact";
+import { useArtifact } from "@/lib/liveArtifact";
 import { EmptyState } from "@/components/Layout";
 
 // 12-lead ECG: observed waveform (input) overlaid with the posterior-predictive
@@ -35,6 +35,7 @@ function areaPath(
 }
 
 export default function EcgOverlay() {
+  const { results } = useArtifact();
   const ecg = results.input_ecg;
   const pp = results.posterior_predictive_ecg;
 

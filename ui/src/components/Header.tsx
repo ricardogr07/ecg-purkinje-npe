@@ -11,11 +11,14 @@ const LINKS = [
 
 export default function Header() {
   // Demo-honesty rule (CLAUDE.md): a surface rendering mock data MUST be labeled illustrative
-  // until it is wired to the real artifact. The design mock carries meta.is_mock; the real
-  // Contract-B does not, so this banner auto-hides once the UI renders the real artifact.
-  const meta = results.meta as { is_mock?: boolean; activation_is_real?: boolean } | undefined;
-  const isMock = Boolean(meta?.is_mock);
-  const activationReal = Boolean(meta?.activation_is_real);
+  // until it is wired to the real artifact. mock/gen-real.mjs stamps meta.is_mock: false when it
+  // bakes a real outputs/day3_*results*.json in (see ui/mock/README.md); the committed fallback
+  // (no real run available at build time) keeps meta.is_mock: true.
+  const meta = (results.meta ?? {}) as Record<string, unknown>;
+  const isMock = Boolean(meta.is_mock);
+  const activationReal = Boolean(meta.activation_is_real);
+  const gitSha = typeof meta.git_sha === "string" ? meta.git_sha : undefined;
+  const bakedFrom = typeof meta.baked_from === "string" ? meta.baked_from : undefined;
   return (
     <>
       <nav
@@ -61,7 +64,24 @@ export default function Header() {
             </>
           )}
         </div>
-      ) : null}
+      ) : (
+        <div
+          role="note"
+          className="border-b border-zinc-800 bg-zinc-900/60 px-4 py-2 text-center text-xs text-zinc-400"
+        >
+          <span className="font-semibold text-zinc-300">Precomputed from a real run</span>:{" "}
+          <code className="rounded bg-black/30 px-1">{results.run_id}</code>
+          {gitSha ? (
+            <>
+              {" "}
+              (commit <code className="rounded bg-black/30 px-1">{gitSha}</code>)
+            </>
+          ) : null}
+          {bakedFrom ? <> from <code className="rounded bg-black/30 px-1">{bakedFrom}</code></> : null}.
+          Static export, values are baked at build time, not fetched live.
+          {results.synthetic_truth ? " Synthetic-truth study, not a real-patient fit." : ""}
+        </div>
+      )}
     </>
   );
 }
