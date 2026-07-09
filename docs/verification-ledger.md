@@ -92,6 +92,7 @@ House rule: **compute beats narrative, the ledger beats prose, a primary source 
 | Our own line: BO+ABC network population, uncalibrated | Alvarez-Barrientos et al. 2025, arXiv:2312.09887 | VERIFIED (author block confirmed) |
 | Forward Sobol sensitivity of QRS to HPS (the inverse counterpart of our work) | Tanikella 2025, arXiv:2505.16696 | VERIFIED (must-distinguish) |
 | SBI calibration toolkit: SBC, expected coverage, TARP; the SBI overconfidence motivation | Talts 2018 (1804.06788); Lemos 2023 (2302.03026); Hermans 2021 (2110.06581) | VERIFIED (prior batch, reused) |
+| sbi `check_tarp` ATC sign: ATC > 0 is overdispersed (posterior too wide), ATC < 0 is underdispersed (too narrow, i.e. overconfident) | sbi source `sbi/diagnostics/tarp.py`, `check_tarp` return block | VERIFIED (string-checked in the installed package). Corrects the `results-summary.md` reading of ATC = -0.072 as "conservative": it is mildly overconfident, and it is pre-conformal. |
 | No cardiac-conduction SBI paper reports SBC/coverage/TARP | targeted arXiv + PubMed searches | BOUNDED negative ("none found"), not proof of nonexistence; OpenAlex unavailable |
 | "amortization mimics unidentifiability" supported by arXiv:2603.21752 | abstract | REFUTED: positive result about Kuramoto oscillators, not cardiac; dropped as evidence |
 
