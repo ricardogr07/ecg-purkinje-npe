@@ -1,9 +1,11 @@
 # CLAUDE.md, `ecg-purkinje-npe`
 
-Project memory for Claude Code. Read this first, then `docs/research-brief-v5.md` (the source of truth) and `docs/execution-plan.md`.
+Project memory for Claude Code. Read this first, then `docs/research-brief.md` (the source of truth) and `docs/architecture.md`.
 
 ## What this is
-Amortized, calibrated **identifiability** characterization of the Purkinje conduction system from the surface ECG. We train a Neural Posterior Estimator (NPE, `sbi`) over conduction parameters at **fixed anatomy** and report a **per-parameter contraction spectrum + posterior degeneracy/multimodality map** with formal calibration (SBC / expected coverage / TARP), on a **public** heart mesh. The contribution is a **scientific finding**, not a new method. Full framing: `docs/research-brief-v5.md`.
+Amortized, calibrated **identifiability** characterization of the Purkinje conduction system from the surface ECG. We train a Neural Posterior Estimator (NPE, `sbi`) over conduction parameters at **fixed anatomy** and report a **per-parameter contraction spectrum + posterior degeneracy/multimodality map** with formal calibration (SBC / expected coverage / TARP), on a **public** heart mesh. The contribution is a **scientific finding**, not a new method. Full framing: `docs/research-brief.md`.
+
+**Honest thesis (hold this line everywhere):** we built a calibrated, amortized identifiability characterization, and in doing so we surfaced and quantified exactly where our synthetic forward model diverges from a real ECG. The identifiability result is synthetic-truth and calibration-honest; the forward-vs-real-ECG fidelity gap is a diagnosed, quantified result (operating-point error, corr 0.199 to 0.788 recovered, residual identified), NOT real-ECG validation. Never let "forward is sound" slide into "forward validated / solved".
 
 ## Non-negotiable rules (hackathon eligibility + honesty)
 - **New work only.** All project code is written during the event (hacking starts 12:30 ET Jul 7). **Do not `git init` / first-commit until after kickoff.** Do not paste in pre-existing project code.
@@ -33,8 +35,8 @@ Amortized, calibrated **identifiability** characterization of the Purkinje condu
 Four tracks run in parallel against three frozen **contracts** (`docs/contracts.md`): Science (S, critical path), Infra (I), Design (D), Writeup (W). Each track works in its **own git worktree** on its own branch and owns distinct paths to avoid conflicts. Spin one up with `scripts/new-agent-worktree.sh <track>`. Full model + subagent roster: `docs/parallelization.md` and `.claude/agents/`.
 
 ## Where things live
-- `docs/research-brief-v5.md`, the source of truth (problem, method, prior art, ledger).
-- `docs/execution-plan.md`, day-by-day, roles, decision gates.
+- `docs/research-brief.md`, the source of truth (problem, method, prior art, priors + noise provenance).
+- `docs/architecture.md`, how the pipeline works end to end; `docs/verification-ledger.md`, the public claim ledger. (`docs/archive/execution-plan.md`, the historical schedule.)
 - `docs/contracts.md`, the θ / results-artifact / demo-API interfaces that decouple the tracks.
 - `docs/parallelization.md`, worktree swarm workflow.
 - `.claude/agents/`, the track subagents. `.localagent/`, the orchestrator (Ricardo + Cowork) home + state log.
@@ -48,6 +50,13 @@ Four tracks run in parallel against three frozen **contracts** (`docs/contracts.
 
 ### Punctuation, no em or en dashes
 - NEVER use em dashes or en dashes anywhere: not in code, comments, docs, commit messages, UI copy, or the writeup. Use a comma, parentheses, a colon, or a plain hyphen instead. This is a hard style rule for every generated artifact.
+
+### Long-running jobs and the shared venv (learned the hard way, Jul 8)
+- **NEVER run a bare `uv run` while a long job shares the venv.** `uv run` auto-syncs the environment mid-job and can swap package versions under a running process. This crashed the honest analysis chain on a torch/sbi mismatch. Use `uv run --no-sync`, or activate the venv directly, or wait for the job.
+- Long sweeps are the one irreplaceable asset in this project. Before any build, prune, or install that touches disk or the venv: confirm no job is running, and check `df -h` on the checkpoint volume.
+
+### Demo honesty, never show mock numbers as real
+- If any surface (UI, API, figure, video) renders mock or placeholder data, it must be **explicitly labeled illustrative** until it is wired to the real artifact. A demo that looks like it shows real results while rendering a mock is a scientific-integrity failure, not a polish issue.
 
 ### Local-only config, keep internal notes out of the public repo
 - `.claude/` and `.localagent/` are gitignored on purpose (internal orchestration and strategy notes, including eligibility discussion, stay out of the public open-source repo). Do not commit them or reference their contents in public docs.

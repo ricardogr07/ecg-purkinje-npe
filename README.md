@@ -7,8 +7,9 @@ Built for *Built with Claude: Life Sciences* (Researcher Track), Jul 7-13. We tr
 > ⚠️ **New-work timeline:** this repo's scaffold (docs, agent config) is planning material. All project **code and git history begin after hacking opens at 12:30 ET on Jul 7**. `git init` and the first commit are the director's first post-kickoff action.
 
 ## Start here
-- [`docs/research-brief-v5.md`](docs/research-brief-v5.md), the source of truth: problem, method, prior art, verification ledger.
-- [`docs/execution-plan.md`](docs/execution-plan.md), day-by-day plan, roles, decision gates.
+- [`docs/research-brief.md`](docs/research-brief.md), the scientific source of truth: problem, method, prior art, priors + noise-model provenance.
+- [`docs/architecture.md`](docs/architecture.md), how the pipeline works end to end, with the two honest results.
+- [`docs/verification-ledger.md`](docs/verification-ledger.md), every load-bearing claim, checked against a primary source or flagged asserted.
 - [`docs/contracts.md`](docs/contracts.md), the θ / results-artifact / demo-API interfaces.
 - [`docs/parallelization.md`](docs/parallelization.md), the git-worktree agent-swarm workflow.
 - [`CLAUDE.md`](CLAUDE.md), project memory for Claude Code.

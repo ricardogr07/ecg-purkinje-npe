@@ -53,4 +53,4 @@ Between sync points: each track merges `main` **into** its branch daily (stay cu
 
 ## How to hand a task to a subagent
 
-From a Claude Code session in the relevant worktree, delegate with a crisp spec: the goal, the owned paths, the contract it must honor, and the Definition of Done from `execution-plan.md`. Keep each agent scoped to its lane; use the `critic` for a read-only pass before anything merges.
+From a Claude Code session in the relevant worktree, delegate with a crisp spec: the goal, the owned paths, the contract it must honor, and the Definition of Done from `docs/archive/execution-plan.md`. Keep each agent scoped to its lane; use the `critic` for a read-only pass before anything merges.

@@ -2,6 +2,8 @@
 
 A grounded snapshot of where the build is after the Day-1 de-risk. Written by the Code lead for director review; reviewed by the critic (see review note at the end).
 
+> **CORRECTION (Jul 7 to 8, supersedes the "forward SOLVED / validated" language in the updates below).** The critic HOLD retracted "forward validated": the earlier 0.86 was a best-lag correlation. The honest current position: the forward SYNTHESIS is exact (transplanting the true activation reproduces True_ecg at corr 1.000), and the True_ecg gap is a diagnosed OPERATING-POINT error, not a model bug (correcting cv, delta_iv, init_length lifts corr 0.199 to 0.788, amplitudes near 1, with a residual to ~0.95 attributed to unexposed cv_myo). This is a diagnosed, partially closed gap, NOT real-ECG validation. Also updated since these entries: Contract A is now 7 params (adds inferred `cv_myo`), Contract D is absolute-mV noise, the miscalibration is inference-side (fixed by per-parameter conformal, not the noise floor), and the `delta_iv` [-90,40] provenance is closed (independently measured -75 plus Gold 2018 CRT interventricular-delay literature). See `PLAN.md` and `outputs/fidelity_diagnosis.md`. The dated entries below are kept as an honest record of what was believed at each step.
+
 ## Summary
 The full forward map runs end to end on the crtdemo geometry, from the 6D conduction vector to a 12-lead ECG, and an amortized NPE trains and returns a posterior on it. The two decision gates are answered: forward eval is 14.2s per theta and the simulator is deterministic given theta. One load-bearing correction to the brief: purkinje-uv does not compute the ECG; that step lives in the myocardial-mesh library, now vendored.
 
