@@ -3,9 +3,9 @@
 How the project works, end to end, and where it is going. Each section says **what** we do, **how**, **why**, and the **next** direction, with a diagram. Companion to `docs/research-brief.md` (scientific source of truth), `docs/contracts.md` (frozen interfaces), and `docs/results-summary.md` (the headline finding).
 
 ## Thesis (honest, one line)
-We built a calibrated, amortized identifiability characterization of the Purkinje conduction system from the ECG, and in doing so we surfaced and quantified exactly where our synthetic forward model diverges from a real ECG.
+We built a calibrated, amortized identifiability characterization of the Purkinje conduction system from a simulated 12-lead ECG, at a stated observation-noise floor.
 
-That second clause is a result, not a hidden caveat. A verification pass refused a laundered fidelity metric, which turned a too-clean "we solved it" into a stronger two-part finding: a trustworthy identifiability spectrum on the simulator, plus a measured, reproducible diagnosis of where the simulator does not yet match reality.
+No real ECG appears anywhere in this work. The forward is a pseudo-ECG in an unbounded homogeneous volume conductor, amplitudes are reported in arbitrary units scaled to a stated mV operating point, and every target is simulator output. Alongside the identifiability result we surfaced and corrected three of our own errors (SBC found overconfidence; `ridge_confirm` refuted a degeneracy headline; an audit found a 3000x SNR error), each of which would have carried a false headline. That self-correction record is the methodological contribution. Comparison against measured ECGs is future work.
 
 ---
 
@@ -86,22 +86,22 @@ flowchart LR
 
 **Result A, synthetic-truth identifiability.** On the simulator, with the frozen contract and noise model, a calibrated per-parameter contraction spectrum and a posterior degeneracy map. Independent corroboration: a third-party Sobol analysis (Tanikella 2025) predicts `branch_angle` and `w` are weakly identifiable and interaction-heavy, which is exactly the diffuse-block degeneracy we expect. This result is calibration-honest and synthetic-truth, not real-ECG-validated. (Headline numbers land from the frozen-contract sweep; see `docs/status-day1.md` and the results summary.)
 
-**Result B, forward-vs-real-ECG fidelity, diagnosed and quantified.** The ECG synthesis is exact: transplanting the true activation field into our geometry reproduces the real `True_ecg` at corr 1.000, and the two meshes are bit-identical, so the lead fields, electrodes, and units are all correct. The gap is entirely the activation field our coupling produces, and it is an operating-point (theta) problem, not a model bug: the true `delta_iv` is about -75 ms and the true Purkinje CV about 1.4 m/s (both read independently from the stored true Purkinje trees, not fitted to the ECG). Correcting cv, delta_iv, and init_length lifts the per-lead correlation from 0.199 to 0.788 and pulls the per-lead amplitude ratios to near 1. A residual to about 0.95 remains, attributed to the not-yet-exposed `cv_myo` and possible Purkinje-muscle-junction density differences. We report this as a per-lead nRMSE plus amplitude-ratio table, a diagnosed, partially closed gap, never as real-ECG validation.
+**Result B, parameter recovery against a synthetic target (not a real-ECG comparison).** There is no real ECG here. `True_ecg` is a pickled simulator output stored beside the true Purkinje trees and used as a regression fixture (`myocardial-mesh/tests/e2e/test_nb_parity.py`), not a patient recording. So the transplant result (true activation reproduces `True_ecg` at corr 1.000) is a self-consistency check, not evidence of fidelity: the same operator on the same activation field on the same mesh necessarily returns the same ECG. Result B compares our forward at the inferred theta against our forward at the stored true theta. Correcting the operating point lifts per-lead correlation from 0.199 to 0.788, and the remaining residual is parameter error (theta was not recovered exactly, and a different theta regrows a different tree). This is a parameter-recovery sanity check in the inverse-crime setting, not a fidelity result. A real forward-vs-measured-ECG comparison is future work with a named path (a bounded torso forward; EDGAR; MedalCare-XL).
 
 ```mermaid
 flowchart TD
-  TA["transplant true activation<br/>into our geom"] --> C1000["corr 1.000 vs True_ecg<br/>synthesis is exact"]
-  RT["REFERENCE theta wrong<br/>dv 0, cv 2.0, il out of range"] --> R02["corr 0.199"]
+  TA["transplant true activation<br/>into our geom"] --> C1000["corr 1.000 vs True_ecg<br/>self-consistency, not fidelity"]
+  RT["REFERENCE theta off<br/>dv 0, cv 2.0, il out of range"] --> R02["corr 0.199"]
   RT --> FIX["correct cv~1.4, dv~-75,<br/>il in [30,60]"]
-  FIX --> R08["corr 0.788, amplitudes ~1"]
-  R08 --> RES["residual to ~0.95:<br/>cv_myo + PMJ density"]
+  FIX --> R08["corr 0.788"]
+  R08 --> RES["residual = parameter error<br/>(inverse-crime recovery)"]
 ```
 
 ---
 
 ## 5. Where we are
 
-The full pipeline runs. Contract A is frozen at 7 parameters and Contract D (absolute-mV noise) is set. The calibration bottleneck is diagnosed as inference-side and addressed by a per-parameter conformal recalibrator (self-check passes on synthetic data). The forward-vs-real-ECG gap is diagnosed as an operating-point error, recoverable to corr 0.788 with an identified residual. The identifiability result stays framed as a synthetic-truth SBC study, not real-ECG-validated. Headline calibration numbers (before/after SBC, TARP, the contraction spectrum, conformal factors) are produced by the frozen-contract sweep and read independently before they become claims.
+The full pipeline runs. Contract A is frozen at 7 parameters and Contract D (absolute-mV noise) is set. The calibration bottleneck is diagnosed as inference-side and addressed by a per-parameter conformal recalibrator (self-check passes on synthetic data). Result B's parameter recovery in the inverse-crime setting reaches corr 0.788 at the corrected operating point, with the residual attributable to parameter error. The identifiability result stays framed as a synthetic-truth SBC study; there is no real-ECG comparison anywhere. Headline calibration numbers (before/after SBC, TARP, the contraction spectrum, conformal factors) are produced by the frozen-contract sweep and read independently before they become claims.
 
 ---
 

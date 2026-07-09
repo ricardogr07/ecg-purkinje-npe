@@ -315,7 +315,20 @@ Tanikella 2025 ran a Sobol sensitivity analysis on these same fractal-tree param
 
 ## Appendix B, Contract D observation-noise model (provenance, folded from observation-model.md)
 
-> TODO(amplitude-rule): pending the infra track's Strocchi reference-theta peak-mV measurement. Will state that the physiological-mV scale is set by normalizing forward(REFERENCE_THETA)'s peak QRS to a fixed target on EACH geometry independently, so the rule (target-peak normalization) is shared between crtdemo and Strocchi while the resulting numeric scale factor is not, and that this equal-target normalization is what makes any cross-geometry CRLB comparison valid (matched SNR by construction) rather than an artifact of two different rescaling choices.
+### Amplitude rule (stated operating point, not a calibration)
+
+The forward is a `1/|r|` pseudo-ECG in an unbounded homogeneous volume conductor, which has **no absolute amplitude calibration** (Gima and Rudy 2002; Bishop and Plank 2011 report this operator under-estimates depolarization amplitude by over an order of magnitude versus a bounded forward). Its output is in arbitrary units. We therefore do not claim a physiological amplitude; we **set a stated operating point** and report identifiability at that point.
+
+The rule: scale each geometry's raw pseudo-ECG so its peak QRS matches one fixed operating target (`TARGET_QRS_PEAK_MV = 1.5`, `src/core/noise.py`), then add the Contract D noise below. The *rule* (single-target peak-normalization) is shared across geometries; the numeric scale factor is not, because each geometry's raw peak differs:
+
+| geometry | raw peak (arb. units) | scale to the 1.5 target |
+|---|---|---|
+| crtdemo | 73.1 | 0.02052 |
+| strocchi_01 | 65.67 | 0.02284 |
+
+The two scale factors differ by ~11%, which is exactly why the rule, not the number, must transfer: reusing crtdemo's factor on Strocchi's raw output would land it at ~1.35, not the shared target. (The realized reference-operating-point ECG peaks at about 1.4 after scaling, just under the 1.5 target the max lead is pinned to; the two figures are the same operating-point choice, not a discrepancy.)
+
+This equal-target normalization is what makes any cross-geometry CRLB comparison valid: identical target amplitude against the identical Contract D sigma means **matched SNR by construction**, so a CRLB difference reflects anatomy, not two different rescaling choices. Both geometries also use the identical `1/|r|` synthesis operator, which is the other precondition. The amplitude is an openly chosen knob, so the claim-class robustness sweep (identifiable params tested at high sigma, diffuse params at low sigma and high amplitude) carries the honesty here, not the absolute mV number.
 
 Canonical, public version of the observation-noise model, reconciled from the Research lane (`.claude_research/contract_b_OBSERVATION_MODEL.md`, now gitignored). Renamed to **Contract D** to avoid the clash with Contract B (results artifact) in `docs/contracts.md`.
 

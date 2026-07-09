@@ -13,13 +13,13 @@ not shipped; this file is their public distillation.
 
 Per the governance in [`scientific-process.md`](scientific-process.md), every claim carries one of:
 
-- **VERIFIED** — a primary source was string-checked (arXiv/PubMed/PMC/PDF), or the arithmetic was
+- **VERIFIED**: a primary source was string-checked (arXiv/PubMed/PMC/PDF), or the arithmetic was
   reproduced in-kernel.
-- **BOUNDED** — checked but inconclusive: body/paywalled, abstract-only, a convention, or not
+- **BOUNDED**: checked but inconclusive: body/paywalled, abstract-only, a convention, or not
   exhaustive (e.g. a "none found" negative). Honest but not airtight.
-- **ASSERTED** — a reasoned design recommendation or a standard derivation, not attributed to an
+- **ASSERTED**: a reasoned design recommendation or a standard derivation, not attributed to an
   opened source. Forbidden in a load-bearing claim unless flagged as such.
-- **REFUTED** — checked and found false; corrected everywhere.
+- **REFUTED**: checked and found false; corrected everywhere.
 
 House rule: **compute beats narrative, the ledger beats prose, a primary source beats everyone.**
 
@@ -120,6 +120,8 @@ Gathered so a reviewer sees every soft spot in one place:
   anatomy/lead-geometry independence is NOT established.
 - OpenAlex citation-graph corroboration was unavailable all project (credential declined), so
   "none found" negatives are bounded nulls, not proofs of absence.
-- The forward-vs-real-ECG fidelity is a diagnosed, quantified gap (operating-point error, corr 0.199
-  to 0.788 recovered, residual identified), NOT real-ECG validation. This ledger never launders it
-  into "forward validated".
+- There is no real ECG in this project. `True_ecg` is pickled simulator output used as a regression
+  fixture, not a patient recording. Result B is therefore a parameter-recovery check in the
+  inverse-crime setting (operating-point corr 0.199 to 0.788, residual = parameter error), NOT a
+  fidelity comparison against a measured ECG. This ledger never launders it into "forward validated"
+  or a real-ECG claim.
