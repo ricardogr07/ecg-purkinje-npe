@@ -26,5 +26,6 @@ COPY experiments/ ./experiments/
 
 ARG GIT_SHA=unknown
 ENV GIT_SHA=$GIT_SHA
-ENTRYPOINT ["uv", "run", "python", "-m", "conduction_lens"]
+# Use the prebuilt venv directly (uv run would re-sync + pull dev deps at container start).
+ENTRYPOINT ["/app/.venv/bin/python", "-m", "conduction_lens"]
 CMD ["--help"]

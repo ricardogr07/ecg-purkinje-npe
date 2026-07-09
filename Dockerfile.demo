@@ -30,4 +30,4 @@ COPY contract_b.json ./outputs/results.json
 ARG GIT_SHA=unknown
 ENV GIT_SHA=$GIT_SHA UI_DIR=/app/ui/out ECG_ARTIFACT=/app/outputs/results.json
 EXPOSE 8000
-CMD ["uv", "run", "uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/app/.venv/bin/uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8000"]
