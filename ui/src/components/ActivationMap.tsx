@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { geometry, results } from "@/lib/artifact";
+import { useArtifact } from "@/lib/liveArtifact";
 import { viridis } from "@/lib/colormap";
 import { EmptyState } from "@/components/Layout";
 
@@ -18,6 +18,7 @@ function normalize(v: number[]): [number, number, number] {
 }
 
 export default function ActivationMap() {
+  const { results, geometry } = useArtifact();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const angleRef = useRef(0.5);
   const sweepRef = useRef(1); // 1 = fully activated (whole map shown)
@@ -274,8 +275,10 @@ export default function ActivationMap() {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", onResize);
     };
+    // Re-init only when the data itself changes (a live swap), not on every
+    // sweep/rotate re-render: key on run_id/geometry_id, not object identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasGeom, hasLat]);
+  }, [hasGeom, hasLat, results.run_id, geometry.geometry_id]);
 
   if (!hasGeom) {
     return <EmptyState label="No geometry in this run (vertices/faces missing)." />;

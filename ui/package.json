@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node mock/gen-real.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

@@ -15,6 +15,13 @@ const CW = 320;
 const CH = 240;
 const CP = 34;
 
+// Real runs emit a single before/after scalar (see artifact.ts); the mock emits
+// a {before,after} object. Normalize to "the value for this mode" either way.
+function pick(v: number | { before: number; after: number } | undefined, mode: Mode): number | undefined {
+  if (v === undefined) return undefined;
+  return typeof v === "number" ? v : v[mode];
+}
+
 function CoverageCurve({ mode }: { mode: Mode }) {
   const cc = results.calibration?.coverage_curve;
   if (!cc?.nominal?.length) return null;
@@ -105,9 +112,10 @@ export default function CalibrationPanel() {
     return <EmptyState label="No calibration diagnostics in this run." />;
   }
 
-  const ks = cal.sbc_ks_pvalue?.[mode];
-  const atc = cal.tarp_atc?.[mode];
+  const ks = pick(cal.sbc_ks_pvalue, mode);
+  const atc = pick(cal.tarp_atc, mode);
   const ksPass = ks !== undefined && ks > 0.05;
+  const sbcIsHistogram = Object.values(cal.sbc ?? {}).some((v) => Array.isArray(v.before) || Array.isArray(v.after));
 
   return (
     <div>
@@ -159,16 +167,26 @@ export default function CalibrationPanel() {
 
         {/* SBC rank histograms */}
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-zinc-200">SBC rank histograms</h3>
+          <h3 className="mb-2 text-sm font-semibold text-zinc-200">
+            {sbcIsHistogram ? "SBC rank histograms" : "SBC KS p-values (per parameter)"}
+          </h3>
           {cal.sbc ? (
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
               {PARAM_ORDER.map((k) => {
-                const ranks = cal.sbc?.[k]?.[mode];
-                if (!ranks) return null;
+                const v = cal.sbc?.[k]?.[mode];
+                if (v === undefined) return null;
                 return (
                   <div key={k} className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-2">
                     <div className="mb-1 font-mono text-[10px] text-zinc-400">{paramMeta(k).alias}</div>
-                    <RankHist counts={ranks} mode={mode} />
+                    {Array.isArray(v) ? (
+                      <RankHist counts={v} mode={mode} />
+                    ) : (
+                      // Real runs emit a p-value per param, not rank counts: no bars to draw.
+                      <div className={`font-mono text-lg ${v > 0.05 ? "text-emerald-300" : "text-rose-300"}`}>
+                        {v.toFixed(3)}
+                        <span className="ml-1.5 font-sans text-[9px] text-zinc-500">SBC KS p</span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -177,8 +195,9 @@ export default function CalibrationPanel() {
             <EmptyState label="No SBC ranks." />
           )}
           <p className="mt-2 text-xs text-zinc-500">
-            Flat = well calibrated. U-shaped = overconfident; a hump = underconfident. Dashed line is
-            the uniform expectation.
+            {sbcIsHistogram
+              ? "Flat = well calibrated. U-shaped = overconfident; a hump = underconfident. Dashed line is the uniform expectation."
+              : "SBC rank-uniformity test per parameter; p > 0.05 (green) does not reject calibration."}
           </p>
         </div>
       </div>

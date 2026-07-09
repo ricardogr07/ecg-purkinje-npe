@@ -17,7 +17,32 @@ loosest, a deliberate cv to init_length_lv ridge). They are NOT measured results
 - `geometry.json` the biventricular surface for the 3D view.
 - `contract_b.schema.json` a JSON Schema for `results.json`, including the
   `calibration` extension the real artifact is expected to carry.
-- `generate.mjs` the deterministic generator.
+- `generate.mjs` the deterministic generator for the two files above.
+- `results.real.json` / `geometry.real.json` the artifact the app actually
+  bakes at build time (`src/lib/artifact.ts`'s `@mock/*.real.json` imports).
+  `geometry.real.json` is the real crtdemo mesh + LV/RV Purkinje trees, written
+  by `experiments/export_geometry.py` (Science track, run offline; also merges
+  the real activation_map + input_ecg into `results.real.json`). The rest of
+  `results.real.json` (posterior/calibration) is regenerated from the latest
+  `outputs/day3_*results*.json` by `gen-real.mjs`, wired as the npm `prebuild`
+  step, so it runs before every `next build` and is never hand-stale. With no
+  `outputs/` populated (e.g. a fresh worktree, or CI), it's a no-op and the
+  committed file is used as-is.
+
+## Two demo surfaces, one artifact.ts
+
+- **Static export (the submission, S3-hosted, no backend).** `next build` always
+  runs `gen-real.mjs` first, then bakes whatever `results.real.json` /
+  `geometry.real.json` it produced into the JS bundle via the static
+  `@mock/*.real.json` imports in `src/lib/artifact.ts`. This is the default for
+  every build; nothing fetches at runtime.
+- **Containerized demo (`Dockerfile.demo`, same-origin FastAPI `/infer` +
+  static UI).** A gated, opt-in path in `src/lib/liveArtifact.ts`: set
+  `NEXT_PUBLIC_LIVE_API=1` before `npm run build` and `EcgOverlay` /
+  `ActivationMap` will additionally try `fetch("/infer")` /
+  `fetch("/geometry/{id}")` on mount and swap to that response if it succeeds,
+  else silently keep the baked artifact (never crashes, never used by the
+  static export since the flag defaults off).
 
 ## Field to component map
 
@@ -54,6 +79,16 @@ serializer:
    - `sbc { <param>: { before[], after[] } }` (rank-histogram counts),
    - `sbc_ks_pvalue { before, after }`, `tarp_atc { before, after }`,
    - `conformal_t { <param>: number }` (per-param inflation factor).
+   - **What the real emitter (`src/npe/emit.py`) actually delivers for the last
+     three, as of Day 3: scalars, not `{before, after}` objects** -
+     `sbc.<param>.before` / `.after` are each a single per-param SBC KS
+     p-value (not a rank-count array), `sbc_ks_pvalue` is one post-conformal
+     summary number (median across params), and `tarp_atc` is one pre-conformal
+     joint number. `CalibrationPanel` / `artifact.ts`'s `Calibration` type
+     accept both shapes (array-or-number, object-or-number) and render a
+     numeric badge instead of a histogram/toggle when it's a scalar, so this
+     doesn't crash the build; it just means the SBC panel is a rank histogram
+     grid against the mock and a p-value badge grid against the real run.
 5. `posterior_predictive_ecg.band_lo` / `band_hi` as full `[lead][sample]`
    matrices (the draft lists them but leaves shape implicit; the demo expects the
    same shape as `signal`).
