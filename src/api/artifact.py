@@ -26,10 +26,10 @@ import numpy as np
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # Frozen Contract A (7 params), duplicated here on purpose: the source of truth is
-# docs/contracts.md + .localagent/FREEZE_AND_PLAN.md, not the provisional src/core/theta.py
-# (still 6D). ponytail: single small table; re-point at core once core is frozen to 7D.
+# docs/contracts.md. Kept in sync with the frozen 7D box in src/core/theta.py (cv floor
+# lowered 1.5 -> 1.3 on Jul 8). ponytail: single small table; re-point at core.theta later.
 PRIOR_BOUNDS: dict[str, list[float]] = {
-    "cv": [1.5, 3.5],
+    "cv": [1.3, 3.5],
     "delta_iv": [-90.0, 40.0],
     "init_length_lv": [30.0, 60.0],
     "init_length_rv": [30.0, 60.0],

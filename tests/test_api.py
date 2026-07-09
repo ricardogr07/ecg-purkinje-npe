@@ -53,7 +53,7 @@ def test_infer_loads_real_artifact(tmp_path, monkeypatch):
     assert b["run_id"] == "r1"
     # mean derived from samples; prior_bounds attached from the frozen table.
     assert b["posterior"]["mean"]["cv"] == pytest.approx(2.1)
-    assert b["posterior"]["prior_bounds"]["cv"] == [1.5, 3.5]
+    assert b["posterior"]["prior_bounds"]["cv"] == [1.3, 3.5]
 
 
 def test_geometry():

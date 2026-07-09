@@ -21,7 +21,7 @@ The 7D parameter vector. Names, ranges, units. Frozen Jul 7.
 
 | # | name | unit | [lo, hi] |
 |---|---|---|---|
-| 0 | `cv` | m/s | [1.5, 3.5] |
+| 0 | `cv` | m/s | [1.3, 3.5]  (floor lowered from 1.5, Jul 8, to bracket crtdemo true ~1.4 interior) |
 | 1 | `delta_iv` | ms | [-90, 40]  (dyssynchrony regime; physiological provenance pending Research P2.6) |
 | 2 | `init_length_lv` | mm | [30, 60] |
 | 3 | `init_length_rv` | mm | [30, 60] |
