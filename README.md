@@ -21,7 +21,7 @@ Python (`uv`, `ruff`, `pytest`), `sbi` for NPE; the author's own libraries `purk
 ## Attribution and vendored components
 This project stands on the author's own open-source libraries, vendored in-tree and reworked during the event as part of the new work:
 - `packages/purkinje-uv` (MIT), fractal-tree Purkinje generation and the FIM eikonal activation solver; its mesh-ingestion layer is reworked here. Upstream: https://github.com/ricardogr07/purkinje-uv
-- `packages/myocardial-mesh` (MIT), the volumetric myocardial eikonal and the lead-field pseudo-ECG that produce the 12-lead ECG, plus the bundled crtdemo geometry (mesh, fibers, electrodes). Upstream: https://github.com/ricardogr07/purkinje-learning-myocardial-mesh
+- `packages/myocardial-mesh` (MIT), the volumetric myocardial eikonal and the pseudo-ECG synthesis (synthesized with a `1/|r|` infinite-homogeneous-medium kernel at assumed standard electrode positions; no torso volume conductor) that produce the 12-lead ECG, plus the bundled crtdemo geometry (mesh, fibers, electrodes). Upstream: https://github.com/ricardogr07/purkinje-learning-myocardial-mesh
 - `packages/jax-bo` (Apache-2.0, author's own fork), the Bayesian-optimization validation baseline (added later in the week).
 
 Each vendored library retains its upstream LICENSE. Note that `myocardial-mesh` (GitHub repo `purkinje-learning-myocardial-mesh`) is a separate published MIT library for the forward simulator, distinct from the thesis analysis package `purkinje-learning`, which is deliberately not used. Data: Strocchi four-chamber cohort (Zenodo 3890034, CC-BY-4.0).

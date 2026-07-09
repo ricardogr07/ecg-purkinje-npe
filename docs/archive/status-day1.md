@@ -32,7 +32,7 @@ Ran A (foreground) and B (background) together; both resolve positively.
 
 ## What is built
 - Repo initialized post-kickoff on `main` + `develop`; Apache-2.0, CI (ruff + pytest), LF `.gitattributes`, no-attribution commit hook armed; `.claude` / `.localagent` untracked.
-- Three own libraries vendored in-tree under `packages/`, consumed editable: `purkinje-uv` (fractal tree + Purkinje FIM eikonal), `myocardial-mesh` (volumetric myocardial eikonal + lead-field 12-lead ECG, ships crtdemo mesh/fibers/electrodes), `jaxbo` (BO baseline, install deferred to a `baseline` group). Each retains its upstream LICENSE. `purkinje-learning` (thesis analysis) is not used.
+- Three own libraries vendored in-tree under `packages/`, consumed editable: `purkinje-uv` (fractal tree + Purkinje FIM eikonal), `myocardial-mesh` (volumetric myocardial eikonal + 12-lead ECG synthesized with a `1/|r|` infinite-homogeneous-medium kernel at assumed standard electrode positions, no torso volume conductor, ships crtdemo mesh/fibers/electrodes), `jaxbo` (BO baseline, install deferred to a `baseline` group). Each retains its upstream LICENSE. `purkinje-learning` (thesis analysis) is not used.
 - Forward model `src/sim/forward.py`: theta -> LV/RV fractal trees (purkinje-uv) -> Purkinje-to-myocardium coupling loop (myocardial-mesh `run_ecg_core`) -> 12-lead ECG. theta maps as: `cv` to Purkinje conduction velocity, `delta_iv` to the LV-RV root-time offset, `init_length_lv/rv` to tree init lengths, `branch_angle` and `w` to tree topology.
 - Supporting core: `src/core/theta.py` (6D schema + provisional prior), `src/core/features.py` (15-dim engineered features), `src/core/noise.py` (per-lead Gaussian waveform noise), `src/sim/sweep.py` (parallel reject-and-resample sweep).
 

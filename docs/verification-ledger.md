@@ -11,7 +11,7 @@ not shipped; this file is their public distillation.
 
 ## Status words
 
-Per the governance in [`sources-of-truth.md`](sources-of-truth.md), every claim carries one of:
+Per the governance in [`scientific-process.md`](scientific-process.md), every claim carries one of:
 
 - **VERIFIED** — a primary source was string-checked (arXiv/PubMed/PMC/PDF), or the arithmetic was
   reproduced in-kernel.
@@ -69,6 +69,7 @@ House rule: **compute beats narrative, the ledger beats prose, a primary source 
 | Claim | Source checked | Status |
 |---|---|---|
 | Strocchi four-chamber cohort = Zenodo 3890034, CC-BY-4.0, 24 files, 22.5 GB | Zenodo API | VERIFIED at source |
+| Strocchi et al., PLoS ONE 2020, DOI 10.1371/journal.pone.0235145, PMID 32589679, CC-BY-4.0 (journal record for the Zenodo 3890034 cohort) | PubMed metadata | VERIFIED |
 | MedalCare-XL = Sci Data 2023 (PMID 37553349); Zenodo 8068944, CC-BY-4.0; 12-lead CSV, 500 Hz, mV; reaction-eikonal monodomain | PubMed + PMC10409805 + Zenodo API | VERIFIED (signals-only record; underlying meshes not separately pulled, BOUNDED) |
 | EDGAR = J Electrocardiol 2015 (PMID 26320369), open-access ECGI/BSPM resource | live repository page + PMC4624576 | VERIFIED at source; moves to future work (not a drop-in 12-lead conduction target) |
 | MyoFit46 = controlled-access CMR sub-study, no ECG/Purkinje ground truth | PubMed abstracts (PMID 41404671, 41796595) | VERIFIED; dropped from feasible inputs |
@@ -78,7 +79,7 @@ House rule: **compute beats narrative, the ledger beats prose, a primary source 
 | Claim | Source checked | Status |
 |---|---|---|
 | Standard 12-lead placement/recording; 0.05-150 Hz diagnostic bandwidth | Kligfield 2007, PMID 17322457 | VERIFIED prior batch (Strocchi ships NO electrode file, hence the disclosure) |
-| Monodomain vs bidomain surface-potential differences are very small | Potse 2006, PMID 17153199 | VERIFIED (justifies the monodomain/eikonal + lead-field operator) |
+| Monodomain vs bidomain surface-potential differences are very small | Potse 2006, PMID 17153199 | VERIFIED (justifies the monodomain/eikonal + lead-field operator, synthesized with a `1/|r|` infinite-homogeneous-medium kernel at assumed standard electrode positions; no torso volume conductor) |
 | Cardiac eikonal-curvature framework; bidomain reduces to eikonal via singular perturbation | Keener 1991 (PMID 1940663); Colli Franzone 1990/2004 | VERIFIED (framework) |
 | CV proportional to sqrt(D) (the `cv_myo` rescale) | eikonal framework + traveling-wave theory | ASSERTED (standard derived consequence, not a quoted sentence; Costa FIMH-2013 recipe not PubMed-indexed) |
 | Orthotropic myocardium, fiber:transverse CV ratio ~2.2:1 | Caldwell 2009, PMID 19808500 | BOUNDED (ratio from body/tables, not this-session abstract) |

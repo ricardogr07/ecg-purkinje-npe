@@ -9,10 +9,10 @@ case "$TRACK" in
   *) echo "usage: $0 <science|infra|design|writeup>"; exit 1 ;;
 esac
 
-# must be run from inside the main repo, which needs at least one commit + a develop branch
-if ! git rev-parse --verify develop >/dev/null 2>&1; then
-  echo "error: 'develop' branch not found. After kickoff (12:30 ET) run:"
-  echo "  git init && git add -A && git commit -m 'chore: scaffold' && git branch develop"
+# must be run from inside the main repo, which needs at least one commit on main
+if ! git rev-parse --verify main >/dev/null 2>&1; then
+  echo "error: 'main' branch not found. After kickoff (12:30 ET) run:"
+  echo "  git init && git add -A && git commit -m 'chore: scaffold' && git branch -M main"
   echo "  git config core.hooksPath scripts/git-hooks   # enforces the no-attribution commit-msg hook"
   exit 1
 fi
@@ -23,7 +23,7 @@ DIR="../$(basename "$PWD")-${TRACK}"
 if git rev-parse --verify "$BRANCH" >/dev/null 2>&1; then
   git worktree add "$DIR" "$BRANCH"
 else
-  git worktree add -b "$BRANCH" "$DIR" develop
+  git worktree add -b "$BRANCH" "$DIR" main
 fi
 
 # .claude/ is gitignored, so worktrees do not inherit it from git.
