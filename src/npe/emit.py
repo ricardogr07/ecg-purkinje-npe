@@ -34,7 +34,6 @@ from calib.conformal import (
     recalibrate,
     sbc_ks_pvals,
 )
-from calib.diagnostics import run_tarp_check
 from core.features import extract_features
 from core.noise import DEFAULT_WAVEFORM_SIGMA_MV, to_physiological_mv
 from core.theta import PRIOR_BOUNDS, THETA_NAMES
@@ -150,12 +149,16 @@ def emit_contract_b(
     cov_after = central_coverage(th_ca, sets, t, level)
     contr_raw = np.median(sets.std(axis=1), axis=0) / prior_std
     contr_after = t * contr_raw
+    # TARP pre AND post conformal, both from the same drawn sets so only the inflation differs.
+    # Marginal conformal can pass SBC while the joint stays off, which is exactly what TARP tests.
     try:
-        tarp = run_tarp_check(post, th_ca, x_ca, n_post=min(n_post, 200))
-        tarp_atc = float(tarp["atc"])
+        from calib.diagnostics import run_tarp_on_sets
+
+        tarp_atc = float(run_tarp_on_sets(sets, th_ca, np.ones(ncol))["atc"])  # pre-conformal
+        tarp_atc_post = float(run_tarp_on_sets(sets, th_ca, t)["atc"])  # post-conformal
     except Exception as e:
         print(f"[emit] TARP skipped: {type(e).__name__}: {e}", flush=True)
-        tarp_atc = None
+        tarp_atc = tarp_atc_post = None
 
     # --- the single demo observation: the re-anchored REFERENCE operating point ---
     obs_theta = {k: float(REFERENCE_THETA[k]) for k in names}  # 6D drops cv_myo -> default myo
@@ -221,6 +224,7 @@ def emit_contract_b(
         "std": _per_param(std, 0.0, ncol),
         "prior_bounds": {k: list(_bounds(k)) for k in FULL_NAMES},
         "contraction": _per_param(contr_after, 0.0, ncol),  # cv_myo fixed => 0 contraction
+        "contraction_pre_conformal": _per_param(contr_raw, 0.0, ncol),  # raw NPE, before inflation
         "coverage": _per_param(cov_after, 1.0, ncol),
     }
     calibration = {
@@ -230,9 +234,13 @@ def emit_contract_b(
             for i, k in enumerate(names)
         },
         "sbc_ks_pvalue": float(np.median(ks_after)),
-        "tarp_atc": tarp_atc,
+        "tarp_atc": tarp_atc,  # pre-conformal (raw posterior)
+        "tarp_atc_post": tarp_atc_post,  # post per-parameter conformal (joint after the fix)
         "conformal_t": {k: float(t[i]) for i, k in enumerate(names)},
-        "note": "conformal_t is per-parameter (marginal SBC); tarp_atc is pre-conformal (joint).",
+        "note": (
+            "conformal_t is per-parameter (marginal SBC). tarp_atc is pre-conformal, "
+            "tarp_atc_post is post-conformal (joint). sbi sign: ATC<0 = overconfident (too narrow)."
+        ),
     }
     artifact = {
         "run_id": f"{out_json.stem}-{_git_sha()}",
