@@ -37,6 +37,7 @@ explicit = true
 [dependency-groups]
 dev = [
     "pytest",
+    "pytest-cov",
     "ruff",
 ]
 # Baseline validation (BO+ABC) is a Sat task and pulls jax/jaxlib/numpyro (heavy, and
