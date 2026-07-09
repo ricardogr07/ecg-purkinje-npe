@@ -1,45 +1,38 @@
-"""Strocchi biventricular mesh -> endocardial surfaces for Purkinje growth.
+"""Strocchi biventricular mesh -> forward-model inputs for Purkinje/eikonal/ECG synthesis.
 
-Ingest one Strocchi four-chamber / biventricular mesh (Strocchi et al. 2020,
-Zenodo 3890034, CC-BY-4.0; the coarse ~1.1 mm cohort) and hand Science the two
-endocardial SURFACES that purkinje-uv grows fractal trees on, mirroring the crtdemo
-inputs that `src/sim/forward.py` already consumes:
+Ingest one Strocchi four-chamber / biventricular mesh (Strocchi et al. 2020, Zenodo 3890034,
+CC-BY-4.0; the coarse ~1.1 mm cohort, EnSight `<id>.case` + `<id>.geo`) and produce the four
+inputs `sim.forward`'s crtdemo pattern consumes:
 
     forward.py wants (by path)            this adapter produces
     ------------------------------------  --------------------------------------------
     crtdemo_LVendo_heart_cut.obj          EndoSurfaces.lv_endo  (-> write_forward_inputs)
     crtdemo_RVendo_heart_cut.obj          EndoSurfaces.rv_endo  (-> write_forward_inputs)
-    crtdemo_f0_oriented.vtk               EndoSurfaces.fibers      (passthrough by path)
-    electrode_pos.pkl                     EndoSurfaces.electrodes  (passthrough by path)
+    crtdemo_mesh_oriented.vtk             the tag-{1,2} volumetric myo mesh (tetra, legacy .vtk)
+    crtdemo_f0_oriented.vtk               CellData["fiber"] on that SAME point/cell set
+    electrode_pos.pkl                     synth_electrodes_from_uvc() (UVC-derived, no torso)
 
-Expected Strocchi inputs
-------------------------
-- A volumetric OR a pre-labelled surface mesh readable by pyvista/meshio: Ensight
-  (`case_XX.case` next to its `.geo`) or VTK. `pyvista.read` handles both formats.
-- A per-cell integer label array. The Strocchi cohort ships anatomical region/surface
-  labels; the LV- and RV-endocardium label VALUES are a dataset convention, so pass
-  them in via `lv_tag` / `rv_tag`. `DEFAULT_LV_ENDO_TAG` / `DEFAULT_RV_ENDO_TAG` below
-  are PLACEHOLDERS: confirm them against the downloaded cohort's label documentation
-  before trusting a run. The label array name is auto-detected from a small candidate
-  list, or pass `tag_field=...` explicitly.
-- Fibres and electrodes are passed through by path (the ECG forward reads them
-  directly); this adapter does not synthesise them.
-
-Extraction is "surface by element tag": select the cells carrying the endo label, then
-take their boundary surface. On a pre-labelled surface mesh this returns exactly the
-labelled endo patch; on a volumetric region this returns that region's closed surface.
-ponytail: element-region tags alone do not separate endo from epi, that split needs the
-dataset's surface labels; wire the real endo label values into lv_tag/rv_tag once the
-file is in hand.
-
-purkinje-uv's FractalTree reads OBJ triangle surfaces only (Mesh.loadOBJ), so
-`write_forward_inputs` emits triangulated `.obj`.
+Dataset contract (verified against the extracted `01.case` header + Zenodo record)
+------------------------------------------------------------------------------
+- Linear tetrahedra. Cell-data: `tags` (24 anatomical region labels; 1=LV myocardium,
+  2=RV myocardium, 3=LA, 4=RA, 5-24=vessels/valve planes, not needed here), `fiber` and
+  `sheet` (per-element unit vectors). Point-data: four UVC scalars (`uvc_transmural`
+  0=endo/1=epi, `uvc_longitudinal` 0=apex/1=base, `uvc_rotational` -pi..0..+pi septum-anchored,
+  `uvc_intraventricular` -1=LV/+1=RV) plus `electrode_endo_rv` (CRT pacing-site marker, unused
+  here). Non-ventricular nodes carry UVC = -100 (sentinel); always exclude them explicitly,
+  a naive `< threshold` comparison will wrongly admit them.
+- There is no native LV-/RV-endocardium element tag (unlike the module's original placeholder
+  assumption): endocardium must be derived from `uvc_transmural` on the tag-{1,2} node shell,
+  split LV/RV by the sign of `uvc_intraventricular` (see `extract_endocardium`).
+- Units are unstated in the record; `assert_millimetre_units` fails loudly if the loaded
+  mesh's bounding box doesn't look like a human heart in mm (metres would read ~1000x smaller).
 
 Pure + offline: reads local files, no network I/O.
 """
 
 from __future__ import annotations
 
+import pickle
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -53,18 +46,37 @@ __all__ = [
     "EndoSurfaces",
     "read_mesh",
     "extract_endocardium",
+    "assert_millimetre_units",
+    "measure_base_to_apex",
+    "synth_electrodes_from_uvc",
+    "extract_ventricular_myocardium",
     "ingest",
-    "DEFAULT_LV_ENDO_TAG",
-    "DEFAULT_RV_ENDO_TAG",
+    "DEFAULT_LV_TAG",
+    "DEFAULT_RV_TAG",
     "TAG_FIELD_CANDIDATES",
 ]
 
-# PLACEHOLDER label values. Confirm against the Strocchi cohort label documentation.
-DEFAULT_LV_ENDO_TAG = 1
-DEFAULT_RV_ENDO_TAG = 2
+# Verified against the extracted 01.case / Zenodo 3890034 label documentation: 1=LV
+# myocardium, 2=RV myocardium (of 24 total anatomical region tags).
+DEFAULT_LV_TAG = 1
+DEFAULT_RV_TAG = 2
 
 # Cell-data array names we try, in order, when tag_field is not given.
 TAG_FIELD_CANDIDATES = ("tags", "elemTag", "Region", "region", "gmsh:physical", "cell_scalars")
+
+# UVC point-data field names (verified against the extracted 01.case VARIABLE section).
+TRANSMURAL_FIELD = "uvc_transmural"
+LONGITUDINAL_FIELD = "uvc_longitudinal"
+ROTATIONAL_FIELD = "uvc_rotational"
+INTRAVENTRICULAR_FIELD = "uvc_intraventricular"
+FIBER_FIELD = "fiber"
+
+# UVC sentinel on non-ventricular nodes (atria, vessels, valve rings); all four UVC scalars
+# carry this value there, so `>= 0` reliably drops them before any threshold comparison.
+UVC_SENTINEL = -100.0
+
+# "Near-endocardial" cutoff on the continuous uvc_transmural field (0=endo, 1=epi).
+DEFAULT_TRANSMURAL_THRESHOLD = 0.05
 
 
 @dataclass
@@ -103,10 +115,18 @@ class EndoSurfaces:
 
 
 def read_mesh(path: str | Path) -> Any:
-    """Read an Ensight `.case` or VTK Strocchi mesh into a pyvista dataset."""
+    """Read an Ensight `.case` or VTK Strocchi mesh into a single pyvista dataset.
+
+    `.case` reads as a `pyvista.MultiBlock` (one block per EnSight "part"); this cohort ships
+    a single part, so `.combine()` it into one `UnstructuredGrid` so every downstream function
+    can assume a flat dataset regardless of input format.
+    """
     import pyvista as pv
 
-    return pv.read(str(path))
+    mesh = pv.read(str(path))
+    if isinstance(mesh, pv.MultiBlock):
+        mesh = mesh.combine()
+    return mesh
 
 
 def _tag_array(mesh: Any, tag_field: str | None) -> tuple[np.ndarray, str]:
@@ -121,45 +141,316 @@ def _tag_array(mesh: Any, tag_field: str | None) -> tuple[np.ndarray, str]:
     )
 
 
-def _surface_by_tag(mesh: Any, tag: int, tags: np.ndarray) -> Any:
-    mask = tags == tag
-    if not mask.any():
-        raise ValueError(
-            f"tag {tag} not present in mesh (present tags: {np.unique(tags).tolist()})"
+def _point_array(mesh: Any, field: str) -> np.ndarray:
+    if field not in mesh.point_data:
+        raise KeyError(
+            f"missing point-data field {field!r}; available: {list(mesh.point_data.keys())}"
         )
-    # Pin algorithm: pyvista is changing the extract_surface default; keep today's behavior.
-    sub = mesh.extract_cells(np.flatnonzero(mask))
-    surf = sub.extract_surface(algorithm="dataset_surface").clean()
-    if surf.n_points == 0:
-        raise ValueError(f"tag {tag} produced an empty surface")
-    return surf
+    return np.asarray(mesh.point_data[field], dtype=float)
+
+
+def _endo_patch(surf: Any, mask: np.ndarray, label: str) -> Any:
+    ids = np.flatnonzero(mask)
+    if ids.size == 0:
+        raise ValueError(f"{label} endocardial selection is empty; check UVC fields/threshold")
+    patch = (
+        surf.extract_points(ids, adjacent_cells=False)
+        .extract_surface(algorithm="dataset_surface")
+        .clean()
+    )
+    if patch.n_points == 0 or patch.n_cells == 0:
+        raise ValueError(f"{label} endocardial patch has no cells; try a larger threshold")
+    return patch
 
 
 def extract_endocardium(
     mesh: Any,
-    lv_tag: int = DEFAULT_LV_ENDO_TAG,
-    rv_tag: int = DEFAULT_RV_ENDO_TAG,
+    lv_tag: int = DEFAULT_LV_TAG,
+    rv_tag: int = DEFAULT_RV_TAG,
     tag_field: str | None = None,
+    transmural_field: str = TRANSMURAL_FIELD,
+    intraventricular_field: str = INTRAVENTRICULAR_FIELD,
+    transmural_threshold: float = DEFAULT_TRANSMURAL_THRESHOLD,
 ) -> EndoSurfaces:
-    """Extract LV and RV endocardial surfaces from a tagged pyvista mesh (pure, offline)."""
+    """Extract LV/RV endocardial surfaces from tag + UVC fields (pure, offline).
+
+    Algorithm (there is no native endocardium element tag in this dataset, see module
+    docstring): take the boundary surface of the combined tag-{lv_tag, rv_tag} cell
+    selection (this cancels the internal LV/RV septal-interface faces, since each is shared
+    by one tag-1 and one tag-2 cell and so is *not* part of the tag-union's exterior boundary
+    -- verified empirically: extracting LV/RV boundaries separately double-counts ~4% of faces
+    at that interface). Then keep only points with `uvc_transmural` near 0 (endocardial, not
+    the -100 sentinel), split into LV/RV by the sign of `uvc_intraventricular`.
+    """
     tags, _ = _tag_array(mesh, tag_field)
+    present = set(np.unique(tags).tolist())
+    for tag, label in ((lv_tag, "LV"), (rv_tag, "RV")):
+        if tag not in present:
+            raise ValueError(
+                f"{label} tag {tag} not present in mesh (present tags: {sorted(present)})"
+            )
+    vent_mask = np.isin(tags, [lv_tag, rv_tag])
+    vent = mesh.extract_cells(np.flatnonzero(vent_mask))
+    surf = vent.extract_surface(algorithm="dataset_surface").clean()
+
+    tm = _point_array(surf, transmural_field)
+    iv = _point_array(surf, intraventricular_field)
+    endo = (tm >= 0) & (tm < transmural_threshold)  # >=0 drops the UVC_SENTINEL
     return EndoSurfaces(
-        lv_endo=_surface_by_tag(mesh, lv_tag, tags),
-        rv_endo=_surface_by_tag(mesh, rv_tag, tags),
+        lv_endo=_endo_patch(surf, endo & (iv < 0), "LV"),
+        rv_endo=_endo_patch(surf, endo & (iv > 0), "RV"),
     )
 
 
-def ingest(
-    case_path: str | Path,
-    *,
-    lv_tag: int = DEFAULT_LV_ENDO_TAG,
-    rv_tag: int = DEFAULT_RV_ENDO_TAG,
+def assert_millimetre_units(mesh: Any, min_mm: float = 50.0, max_mm: float = 300.0) -> float:
+    """Hard, loud sanity check that mesh coordinates are millimetres, not metres.
+
+    Neither the `.case` header nor the Zenodo record states units. A human heart spans
+    roughly 100-150 mm base-to-apex / side-to-side; if the bounding-box extent comes back
+    ~0.1-0.15, the coordinates are actually metres and every downstream conduction-velocity
+    number (m/s over mm) would be wrong by 1000x. min_mm/max_mm intentionally bracket wider
+    than a normal heart (this cohort is dilated heart-failure ventricles).
+    """
+    bounds = np.asarray(mesh.bounds, dtype=float).reshape(3, 2)
+    max_span = float((bounds[:, 1] - bounds[:, 0]).max())
+    if not (min_mm <= max_span <= max_mm):
+        raise ValueError(
+            f"mesh bounding-box max extent {max_span:.4f} is outside the expected "
+            f"[{min_mm}, {max_mm}] mm range for a human heart; coordinates may be in metres "
+            f"(or another unit), not millimetres. bounds={mesh.bounds}"
+        )
+    return max_span
+
+
+def measure_base_to_apex(
+    mesh: Any,
+    intraventricular_sign: int,
+    longitudinal_field: str = LONGITUDINAL_FIELD,
+    intraventricular_field: str = INTRAVENTRICULAR_FIELD,
+    apex_quantile: float = 0.02,
+    base_quantile: float = 0.98,
+) -> float:
+    """Measure one ventricle's base-to-apex extent from apico-basal UVC + coordinates.
+
+    Apex/base centroids are the mean position of points with `uvc_longitudinal` below/above
+    the given quantile cutoffs, restricted to the requested ventricle (sign of
+    `uvc_intraventricular`: -1 for LV, +1 for RV). Compare against the frozen
+    `init_length_lv`/`init_length_rv` prior box (`src/core/theta.py`, [30, 60] mm) and Lang
+    2015 (RV base-to-apex 71+/-6 mm normal) -- this cohort is heart-failure patients with
+    dilated ventricles, so the box may not hold; report honestly either way.
+    """
+    ab = _point_array(mesh, longitudinal_field)
+    iv = _point_array(mesh, intraventricular_field)
+    pts = np.asarray(mesh.points, dtype=float)
+    valid = ab >= 0
+    vent = valid & (np.sign(iv) == intraventricular_sign)
+    apex_pts = pts[vent & (ab < np.quantile(ab[vent], apex_quantile))]
+    base_pts = pts[vent & (ab > np.quantile(ab[vent], base_quantile))]
+    return float(np.linalg.norm(base_pts.mean(axis=0) - apex_pts.mean(axis=0)))
+
+
+# ---------------------------------------------------------------------------------------
+# C.6 electrode placement. See synth_electrodes_from_uvc docstring for the disclosed rule.
+# ---------------------------------------------------------------------------------------
+
+# (label, level along the long axis [0=apex, 1=base], angle in the (e_sept, e_lat) plane
+# (degrees, 0=septum, +=toward RV free wall, -=toward LV lateral wall), standoff beyond the
+# local epicardial radius in mm). V1->V6 sweep right (RV side) to left-lateral (LV free wall)
+# at a fixed mid-ventricular level, mimicking the real precordial intercostal sweep; RA/LA
+# sit near the base and further out (shoulder-like); LL sits beyond the apex (leg-like).
+_STANDOFF_MM = 30.0
+_LIMB_STANDOFF_MM = 50.0
+_ELECTRODE_LAYOUT: tuple[tuple[str, float, float, float], ...] = (
+    ("V1", 0.45, 100.0, _STANDOFF_MM),
+    ("V2", 0.45, 60.0, _STANDOFF_MM),
+    ("V3", 0.45, 20.0, _STANDOFF_MM),
+    ("V4", 0.45, -20.0, _STANDOFF_MM),
+    ("V5", 0.45, -60.0, _STANDOFF_MM),
+    ("V6", 0.45, -100.0, _STANDOFF_MM),
+    ("RA", 0.95, 130.0, _LIMB_STANDOFF_MM),
+    ("LA", 0.95, -130.0, _LIMB_STANDOFF_MM),
+    ("LL", -0.15, -130.0, _LIMB_STANDOFF_MM),
+)
+
+
+def synth_electrodes_from_uvc(
+    mesh: Any,
+    longitudinal_field: str = LONGITUDINAL_FIELD,
+    rotational_field: str = ROTATIONAL_FIELD,
+    transmural_field: str = TRANSMURAL_FIELD,
+    intraventricular_field: str = INTRAVENTRICULAR_FIELD,
+) -> dict[str, list[float]]:
+    """Synthesize 9 electrode positions (V1-V6, LA, RA, LL) from this heart's own UVC frame.
+
+    Disclosed modeling rule (no torso ships with this cohort, see module docstring, so the
+    real Kligfield 2007 intercostal-space landmarks have no body surface to sit on):
+
+    1. Build an orthonormal frame from the mesh's own UVC fields: `e_long` is the apex
+       (uvc_longitudinal ~ 0) -> base (~ 1) direction; `e_sept` is the direction from the
+       long axis toward the septum (uvc_rotational ~ 0, LV side) at mid-ventricle; `e_lat`
+       completes the frame (`e_long x e_sept`).
+    2. Estimate a characteristic epicardial radius (uvc_transmural ~ 1) at mid-ventricle,
+       used as the base standoff distance so electrodes sit just outside the heart surface.
+    3. Each of the 9 electrodes is placed at `apex + level * long_len * e_long + (radius +
+       standoff) * (cos(theta) * e_sept + sin(theta) * e_lat)` for a fixed (level, theta,
+       standoff) triple per `_ELECTRODE_LAYOUT`: V1->V6 sweep theta from the RV free-wall
+       side to the LV lateral side at a fixed mid-ventricular level (mimicking the real
+       precordial sweep); RA/LA sit near the base and further out (shoulder-like); LL sits
+       beyond the apex (leg-like).
+
+    This is a disclosed synthetic approximation (no real torso geometry, one constant radius
+    reused at every level), not a body-surface measurement -- flag as such in any writeup.
+    Returns a dict shaped exactly like crtdemo's electrode_pos.pkl: 9 keys, plain 3-float
+    lists in mm.
+    """
+    ab = _point_array(mesh, longitudinal_field)
+    rot = _point_array(mesh, rotational_field)
+    tm = _point_array(mesh, transmural_field)
+    iv = _point_array(mesh, intraventricular_field)
+    pts = np.asarray(mesh.points, dtype=float)
+
+    valid = ab >= 0
+    apex = pts[valid & (ab < 0.02)].mean(axis=0)
+    base = pts[valid & (ab > 0.98)].mean(axis=0)
+    long_vec = base - apex
+    long_len = float(np.linalg.norm(long_vec))
+    e_long = long_vec / long_len
+    heart_center = apex + 0.5 * long_len * e_long
+
+    septal = valid & (np.abs(rot) < 0.15) & (ab > 0.4) & (ab < 0.6) & (iv < 0)
+    v = pts[septal].mean(axis=0) - heart_center
+    v = v - np.dot(v, e_long) * e_long
+    e_sept = v / np.linalg.norm(v)
+    e_lat = np.cross(e_long, e_sept)
+    e_lat /= np.linalg.norm(e_lat)
+
+    epi = valid & (tm > 0.9) & (ab > 0.4) & (ab < 0.6)
+    rel = pts[epi] - heart_center
+    rel_perp = rel - np.outer(rel @ e_long, e_long)
+    radius = float(np.linalg.norm(rel_perp, axis=1).mean())
+
+    out: dict[str, list[float]] = {}
+    for label, level, theta_deg, standoff in _ELECTRODE_LAYOUT:
+        theta = np.deg2rad(theta_deg)
+        offset = (radius + standoff) * (np.cos(theta) * e_sept + np.sin(theta) * e_lat)
+        point = apex + level * long_len * e_long + offset
+        out[label] = [float(x) for x in point]
+    return out
+
+
+def extract_ventricular_myocardium(
+    mesh: Any,
+    lv_tag: int = DEFAULT_LV_TAG,
+    rv_tag: int = DEFAULT_RV_TAG,
     tag_field: str | None = None,
-    fibers: str | Path | None = None,
-    electrodes: str | Path | None = None,
-) -> EndoSurfaces:
-    """Read a Strocchi mesh file and return its LV/RV endo surfaces + fibre/electrode hooks."""
-    surfaces = extract_endocardium(read_mesh(case_path), lv_tag, rv_tag, tag_field)
-    surfaces.fibers = Path(fibers) if fibers is not None else None
-    surfaces.electrodes = Path(electrodes) if electrodes is not None else None
-    return surfaces
+    fiber_field: str = FIBER_FIELD,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Filter the volumetric mesh to tag-{lv_tag, rv_tag} tetrahedra (LV+RV myocardium only).
+
+    Returns (points, tetra cell connectivity, per-cell fiber vectors), all on the SAME
+    filtered point/cell set so a myo-mesh file and a fibers file built from them stay
+    geometrically consistent (same points, same cell ordering).
+    """
+    tags, _ = _tag_array(mesh, tag_field)
+    vent_mask = np.isin(tags, [lv_tag, rv_tag])
+    vent = mesh.extract_cells(np.flatnonzero(vent_mask))
+    points = np.asarray(vent.points, dtype=float)
+    cells = np.asarray(vent.cells_dict[10], dtype=int)  # VTK_TETRA == 10
+    fiber = np.asarray(vent.cell_data[fiber_field], dtype=float)
+    if cells.shape[0] != fiber.shape[0]:
+        raise ValueError(
+            f"cell/fiber count mismatch after tag filtering: {cells.shape[0]} cells vs "
+            f"{fiber.shape[0]} fiber vectors"
+        )
+    return points, cells, fiber
+
+
+def write_volumetric_inputs(
+    points: np.ndarray, cells: np.ndarray, fiber: np.ndarray, out_dir: str | Path
+) -> dict[str, Path]:
+    """Write the tag-filtered tetra myo mesh + a same-point/cell fibers file (legacy .vtk).
+
+    Mirrors crtdemo_mesh_oriented.vtk / crtdemo_f0_oriented.vtk: the myo mesh carries no
+    fiber data, the fibers file carries CellData["fiber"] (per-element, matching the CASE's
+    native per-element fiber field -- no node/cell interpolation needed).
+    """
+    import meshio
+
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    myo_path = out / "strocchi_myo.vtk"
+    fibers_path = out / "strocchi_fibers.vtk"
+    meshio.write_points_cells(str(myo_path), points, [("tetra", cells)])
+    meshio.write_points_cells(
+        str(fibers_path), points, [("tetra", cells)], cell_data={"fiber": [fiber]}
+    )
+    return {"myo_mesh": myo_path, "fibers": fibers_path}
+
+
+def write_electrodes(electrodes: dict[str, list[float]], out_dir: str | Path) -> Path:
+    """Write the electrode dict as a pickle, matching crtdemo's electrode_pos.pkl format."""
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    path = out / "strocchi_electrode_pos.pkl"
+    with open(path, "wb") as f:
+        pickle.dump(electrodes, f)
+    return path
+
+
+def ingest(case_path: str | Path, out_dir: str | Path, **kwargs: Any) -> dict[str, Path]:
+    """Read a Strocchi `.case` mesh and write all four forward-model inputs to `out_dir`.
+
+    Returns the same key shape `sim.forward.load_geometry`/`FractalTree` consume: lv_endo,
+    rv_endo (OBJ), myo_mesh, fibers (volumetric .vtk), electrodes (pickle).
+    """
+    mesh = read_mesh(case_path)
+    assert_millimetre_units(mesh)
+    surfaces = extract_endocardium(mesh, **kwargs)
+    paths = {
+        k: v
+        for k, v in surfaces.write_forward_inputs(out_dir).items()
+        if k in ("lv_endo", "rv_endo")
+    }
+    points, cells, fiber = extract_ventricular_myocardium(mesh)
+    paths.update(write_volumetric_inputs(points, cells, fiber, out_dir))
+    electrodes = synth_electrodes_from_uvc(mesh)
+    paths["electrodes"] = write_electrodes(electrodes, out_dir)
+    return paths
+
+
+# data/ is gitignored (see .gitignore); these are worktree-local defaults, not shipped in git.
+DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "01"
+DEFAULT_CASE_PATH = DATA_DIR / "01.case"
+DEFAULT_CACHE_DIR = DATA_DIR / "_forward_inputs"
+
+
+def load_geometry(
+    case_path: str | Path = DEFAULT_CASE_PATH, cache_dir: str | Path = DEFAULT_CACHE_DIR
+) -> Any:
+    """Build the Strocchi MyocardialMesh once (mesh + fibers + electrodes).
+
+    Mirrors `sim.forward.load_geometry`'s crtdemo pattern (same MyocardialMesh(myo_mesh=,
+    electrodes_position=, fibers=) call), only the geometry differs. Caches the derived
+    forward-input files under `cache_dir` (`ingest` is a pure function of `case_path`, so
+    reusing an existing cache is safe) so repeated calls don't re-run the ingest step.
+
+    NOTE: `_build_tree` in `sim.forward.forward` grows LV/RV Purkinje trees on crtdemo's
+    OWN endocardial OBJ paths (module-level constants, not parametrized by `geom`), not on
+    this adapter's `lv_endo`/`rv_endo` outputs. Calling `forward(theta, load_geometry())`
+    therefore couples a crtdemo-topology Purkinje tree to this Strocchi myocardium; see the
+    C.7 smoke-test caveat in the adapter's test/report. Full cross-geometry support needs
+    `sim.forward` to accept endo-surface paths as an argument, not forked here.
+    """
+    from myocardial_mesh import MyocardialMesh
+
+    cache_dir = Path(cache_dir)
+    myo_path = cache_dir / "strocchi_myo.vtk"
+    fibers_path = cache_dir / "strocchi_fibers.vtk"
+    electrodes_path = cache_dir / "strocchi_electrode_pos.pkl"
+    if not (myo_path.exists() and fibers_path.exists() and electrodes_path.exists()):
+        ingest(case_path, cache_dir)
+    return MyocardialMesh(
+        myo_mesh=str(myo_path),
+        electrodes_position=str(electrodes_path),
+        fibers=str(fibers_path),
+    )
