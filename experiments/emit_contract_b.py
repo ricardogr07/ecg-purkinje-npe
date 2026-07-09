@@ -252,8 +252,14 @@ def main() -> None:
 
 
 def _validate(artifact: dict) -> None:
-    """Check the artifact against the frozen schema (jsonschema if present, else required keys)."""
+    """Check the artifact against the frozen schema (jsonschema if present, else required keys).
+
+    The schema lives under ui/ which is not shipped in the CLI image; if it is absent, skip
+    validation rather than fail the run (the artifact is already written)."""
     schema_path = Path(__file__).resolve().parents[1] / "ui" / "mock" / "contract_b.schema.json"
+    if not schema_path.is_file():
+        print(f"[emit] schema check skipped (schema not present at {schema_path})", flush=True)
+        return
     schema = json.loads(schema_path.read_text())
     try:
         import jsonschema
