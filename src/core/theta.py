@@ -2,7 +2,7 @@
 inferred param, exposed as a forward input via MyocardialMesh.set_fiber_cv).
 
 Ranges are the FROZEN Contract A box (director-approved, see .localagent/FREEZE_AND_PLAN.md
-and docs/priors.md), arrived at independently of the thesis BOECGParameter bounds (brief
+and docs/research-brief.md), arrived at independently of the thesis BOECGParameter bounds (brief
 section 8). Sourced anchors: cv (Maguy 2009 Purkinje CV), branch_angle / w (Sahli Costabal
 2015 + Tanikella 2025), init_length labeled OUR modeling choice (Tanikella fixed 50 mm, LV).
 delta_iv is the dyssynchrony regime; its lower bound [-90] is PROVENANCE-PENDING (Research

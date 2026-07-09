@@ -6,7 +6,7 @@ These three contracts decouple the tracks so they run in parallel against mocks.
 
 ## Contract A, θ schema (Science ↔ Code)
 
-The 6D parameter vector. Names, ranges, units. Frozen Thu Jul 9.
+The 7D parameter vector. Names, ranges, units. Frozen Jul 7.
 
 | name | block | units | prior (uniform) | notes |
 |---|---|---|---|---|
@@ -17,7 +17,19 @@ The 6D parameter vector. Names, ranges, units. Frozen Thu Jul 9.
 | `branch_angle` | diffuse | rad | [lo, hi] TBD | fine topology |
 | `w` | diffuse | - | [lo, hi] TBD | branch divergence / PMJ spread |
 
-Ranges come from the published `BOECGParameter` physiological bounds (flag in the eligibility question). Canonical order = the table order. Serialize as a JSON object keyed by name; never rely on positional order across module boundaries.
+**FROZEN Jul 7 (director-approved), 7 parameters, canonical CODE-name order.** These supersede the TBD placeholders above. Ranges are literature-grounded and independent of the thesis `BOECGParameter` bounds (provenance and citations: `docs/research-brief.md` Appendix A).
+
+| # | name | unit | [lo, hi] |
+|---|---|---|---|
+| 0 | `cv` | m/s | [1.5, 3.5] |
+| 1 | `delta_iv` | ms | [-90, 40]  (dyssynchrony regime; physiological provenance pending Research P2.6) |
+| 2 | `init_length_lv` | mm | [30, 60] |
+| 3 | `init_length_rv` | mm | [30, 60] |
+| 4 | `branch_angle` | rad | [0.10, 0.30] |
+| 5 | `w` | - | [0.05, 0.20] |
+| 6 | `cv_myo` | m/s | [0.5, 1.0]  (inferred; director chose 7 params) |
+
+Canonical order = the table order. Serialize as a JSON object keyed by name; never rely on positional order across module boundaries. The observation-noise model is **Contract D** (`docs/research-brief.md` Appendix B).
 
 ---
 
@@ -29,11 +41,11 @@ One JSON per inference run. The frontend, the figures, and the write-up all read
 {
   "run_id": "string",
   "geometry_id": "strocchi_01 | cardiac_demo",
-  "theta_names": ["cv","delta_iv","init_length_lv","init_length_rv","branch_angle","w"],
+  "theta_names": ["cv","delta_iv","init_length_lv","init_length_rv","branch_angle","w","cv_myo"],
   "observation_kind": "features | waveform",
   "input_ecg": { "leads": ["I","II",...], "signal": [[...12 leads x T...]], "fs_hz": 500 },
   "posterior": {
-    "samples": [[...6 floats...]],        // for the corner/degeneracy plot
+    "samples": [[...7 floats...]],        // for the corner/degeneracy plot
     "contraction": {"cv": 0.12, "...": 0.0},  // posterior_std / prior_std per param
     "coverage": {"cv": 0.94, "...": 0.0}      // empirical coverage per param
   },

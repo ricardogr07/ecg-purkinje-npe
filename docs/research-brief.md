@@ -1,4 +1,4 @@
-# Research Brief v5, Calibrated, Amortized Identifiability of Purkinje Conduction from the ECG
+# Research Brief, Calibrated, Amortized Identifiability of Purkinje Conduction from the ECG
 
 **Event:** Built with Claude: Life Sciences (Researcher Track) · **Window:** Jul 7 (12:30 PM ET) → Jul 13 (9:00 PM ET) · **Team size:** ≤ 2
 **Status:** concept, pressure-tested. v5 folds in a reviewer critique (v1→v2), a prior-art verification pass (v2→v3), a source-code + competitor-paper verification pass (v3→v4), and two author-block/eligibility confirmations (v4→v5). See §13 for the changelog and §14 for the verification ledger.
@@ -87,7 +87,10 @@ Macro/micro stays only as the **narrative hook**; the measured boundary + correl
 ### 5.1 Forward model (simulator)
 `purkinje-uv` fractal tree → FIM eikonal activation → 12-lead ECG. Fixed per run: geometry, fibers, electrode positions, `N_it`.
 
-### 5.2 Parameter vector θ, 6D
+### 5.2 Parameter vector θ, 7D (frozen Contract A)
+
+> **Freeze note (Jul 7):** Contract A froze at **7D**, adding `cv_myo` (myocardial conduction velocity, inferred over [0.5, 1.0], Fu 2024) as the 7th parameter so nothing is fixed to flatter the result. Full reconciled priors, sources, and the `delta_iv` provenance are in **Appendix A**. The block hypothesis below is unchanged.
+
 *Constraint-candidate block (hypothesis: constrained):*
 1. `cv`, conduction velocity (global) → QRS **duration**.
 2. **`Δ_IV`, LV-RV interventricular activation delay** *(replaces global `root_time`)* → axis/morphology; clinically meaningful (CRT). *Rationale: a global time-shift is trivially unidentifiable under shift-invariant features and would look like a bug; a relative LV-RV delay is the meaningful, recoverable quantity.*
@@ -116,6 +119,9 @@ Amortized NPE (`sbi`, normalizing flow). Budget ~2-5k fresh sims (usable), ~10k 
 > **Day-1 confirmation (2 lines):** run the same θ twice, diff the ECG. Identical → deterministic (expected) → §5.6 is mandatory. Different → the simulator *is* stochastic after all → revert to a nuisance-latent treatment and record seeds. This test sits at the top of Tuesday next to the forward-eval benchmark.
 
 ### 5.6 Observation-noise model (MANDATORY)
+
+> Frozen as **Contract D** (absolute-mV white Gaussian, waveform floor 0.025 mV); the full model, realization discipline, and sourcing are in **Appendix B**.
+
 Because the simulator is deterministic (§5.5), the explicit noise model is the **only** source of observation noise, without it, NPE trains on a deterministic map and calibration is meaningless (artificially perfect coverage). Add realistic noise at the observation: feature-level, and/or waveform-level (baseline wander, Gaussian, per-lead noise). Calibration **under this noise** is the credible version of the identifiability claim, and the noise magnitude becomes a stated modeling assumption that shifts the identifiability boundary honestly. (Sensitivity of the boundary to noise level is a natural, cheap ablation.)
 
 ### 5.7 Identifiability metric (defined now)
@@ -232,3 +238,123 @@ Both v5 changes are cleanups closing open flags v4 left, each backed by a direct
 - Inverse ECG for cardiac digital twins: survey, https://arxiv.org/abs/2406.11445
 - `sbi` toolkit (NPE, SBC, expected coverage, TARP), https://sbi-dev.github.io/sbi/
 - `purkinje-uv` (own, MIT), https://github.com/ricardogr07/purkinje-uv
+
+---
+
+## Appendix A, Contract A priors (provenance, folded from priors.md)
+
+
+Single source of truth for the Thursday Contract A freeze, reconciling two independent passes: the Research lane (`.claude_research/contract_a_*`, better-sourced numbers) and the Cowork lane (this file). Where they differed, this doc **defers to Research's sourced values**. Grounded in public literature, arrived at independently of the thesis `BOECGParameter` bounds (eligibility, brief section 8).
+
+## Naming (resolved): code names are canonical
+The serialization keys are the code names already wired into `src/core/theta.py`, the mock, and Contract B. Research's symbols are display aliases. Do not rename the keys (it would break the mock and Contract B).
+
+## Two kinds of parameter (state this in the writeup)
+- **Measured physiology:** `cv` (Purkinje CV), `delta_iv`. Ranges from electrophysiology measurements.
+- **Fractal-tree model parameters:** `init_length_lv`, `init_length_rv`, `branch_angle`, `w`. Knobs of the Sahli Costabal 2015 generation method that `purkinje-uv` implements; ranges from that method paper plus the independent third-party Tanikella 2025 sensitivity study. Labeled model-plausibility, not measured anatomy.
+
+## Recommended uniform priors (reconciled)
+
+| code name (canonical) | alias | unit | [lo, hi] | nominal | kind | primary source |
+|---|---|---|---|---|---|---|
+| `cv` | CV_pk | m/s | [1.5, 3.5] | 2.2 | measured | Maguy 2009 (control 2.2 m/s, 1.5 in CHF); textbook 2 to 4 |
+| `delta_iv` | dIV | ms | [-90, 40] (dyssynchrony + paced box) | ~-75 (crtdemo ref) | measured envelope + our box | Gold 2018 (measured LBBB RV-LV 77 +/- 38 ms, PMID 30354310); Burri 2005 (VV pacing +/- 40 ms, PMID 16171751); Durrer 1970 (normal, PMID 5482907). See "delta_iv provenance" below. |
+| `init_length_lv` | L0_LV | mm | [30, 60] | 50 | model | OUR choice: Tanikella fixed 50 mm (LV only, not swept); the range + LV/RV split are ours |
+| `init_length_rv` | L0_RV | mm | [30, 60] | 50 | model | OUR choice (see init_length_lv) |
+| `branch_angle` | alpha | rad | [0.10, 0.30] | 0.175 | model | Sahli Costabal 2015 (0.15); Tanikella 2025 (0.2 +/- 30%), widened |
+| `w` | w | - | [0.05, 0.20] | 0.10 | model | Sahli Costabal 2015; Tanikella 2025, widened |
+| `cv_myo` | CV_myo | m/s | [0.5, 1.0] | 0.67 | measured | Fu 2024. INFERRED (7th param, director decision Jul 7) |
+
+**FROZEN Jul 7:** 7 parameters (director chose to infer `cv_myo` rather than fix it, so no fixed nuisance remains). `cv_myo` is appended last so the first six keep their canonical order. Robustness supplement: also report at `cv_myo` = 0.5 and 1.0 to show conclusions do not hinge on it.
+
+**Simulator constraints to respect when sampling:** `branch_angle` in (0, pi] (box is safe); `w` >= 0 (box is safe); `l_segment` <= min(init_length, length), so keep `l_segment` small (about 0.1 mm) or the 30 to 60 mm init_length box can trip the constraint.
+
+## Freeze decisions (RESOLVED Jul 7)
+1. **`init_length` LV vs RV: SEPARATE, both [30, 60]** (director). Update `src/core/theta.py` from its old asymmetric guess (LV [15,45], RV [45,95]) to symmetric [30,60] on each. Labeled our modeling choice (Tanikella fixed 50 mm, LV only).
+2. **One CV or two: SEVEN params, infer `cv_myo` over [0.5, 1.0]** (director). More defensible (nothing fixed to flatter the result); costs calibration budget, so use the 5k sweep on the 7D contract. Report `cv_myo` = 0.5 / 1.0 slices as robustness.
+3. **`delta_iv` width, now load-bearing (Science finding Jul 7).** The crtdemo reference is a dyssynchronous CRT case with a true `delta_iv` of about -75 ms, which is OUTSIDE the earlier [-25, 25] and [-40, 40] boxes, so the prior literally could not represent the truth and fed the miscalibration. The operative prior must span the dyssynchrony regime. Widening is a bug fix, not a preference. Two cautions: (a) prefer a SYMMETRIC sourced box (e.g. [-90, 90] or the sourced BBB range from Research P2.6) over an asymmetric box centered on -75, which would look like tuning the prior to the answer; (b) the width moves the headline, since contraction = post_std / prior_std, a wider `delta_iv` prior mechanically shrinks its contraction, so choose the width on physiology and document it. Interim Science value: [-90, 40].
+4. **Other tightenings vs `theta.py`:** `cv` upper 3.5 (was 4.0), `branch_angle` [0.10, 0.30] (was [0.05, 0.40]), `w` [0.05, 0.20] (was [0.0, 0.25]). Adopt the reconciled, sourced values.
+
+## delta_iv provenance (sourced; replaces the earlier "source-pending" placeholder)
+This closes the circularity flag: the earlier [-90, 40] was reverse-engineered from crtdemo's true ~-75 ms minus a margin. The bound is now anchored to measured interventricular-timing literature. Keep the two kinds separate: what the clinic MEASURES vs the box WE choose.
+
+**Sign convention (model):** `delta_iv = t_RV - t_LV` (RV root activation time minus LV root, LV pinned at 0). LBBB (the crtdemo regime) means the RV activates first, so LBBB `delta_iv` is negative (tens of ms). The clinical "RV-LV interventricular electrical delay" reported in CRT trials is the opposite sign (`t_LV - t_RV`, positive when the RV is early), so `delta_iv = -(RV-LV delay)`. Watch this sign when reading the numbers below.
+
+**MEASURED physiology (the diseased + paced envelope):**
+- *Normal is small.* Durrer 1970 (PMID 5482907): in the isolated normal human heart the RV and LV endocardial breakthroughs are near-simultaneous (RV breakthrough within roughly 5 to 10 ms of LV onset). So a wide `delta_iv` box is a disease/pacing box, never a normal-heart box.
+- *LBBB / dyssynchrony is strongly negative (load-bearing anchor).* Gold 2018 (PMID 30354310, SMART-AV interventricular-delay substudy) measured the RV-LV interventricular electrical delay directly from the implanted leads (time between the RV and LV electrograms): LBBB 77 +/- 38 ms vs non-LBBB 40 +/- 37 ms; quartile cutoffs at 40 / 65 / 100 ms; the RV activated before the LV in 97% of LBBB (81% of non-LBBB) subjects. Mapping to our sign, LBBB `delta_iv` is centered near -77 ms with SD about 38 ms and a top quartile beyond -100 ms. crtdemo's true value (~-75 ms) sits essentially at the LBBB mean. Corroboration, same trial: Gold 2011 (PMID 21875862) reports QLV (QRS onset to LV electrogram) median 95 ms, IQR 70 to 120, up to 195 ms (n = 426), confirming the LV activates about 95 ms late in this population. Mechanism: Auricchio 2004 (PMID 14993135) mapped 24 heart-failure + LBBB hearts and found a U-shaped activation wavefront (23 of 24) travelling around a line of functional block (anterior 12, lateral 8, inferior 3): the RV activates first, the LV last via slow transseptal spread. (Auricchio's exact transseptal-time ms sit behind the paywall and are marked UNVERIFIED here; only the qualitative RV-first / LV-last pattern is taken from the abstract.)
+- *Paced / RV-after-LV is positive.* Sequential biventricular pacing programs a VV offset that can pre-excite the LV, making the RV activate after the LV (positive `delta_iv`). Burri 2005 (PMID 16171751) programmed VV from LV-40 (LV pre-excited by 40 ms) to LV+40 (RV pre-excited by 40 ms); the LV-40 setting corresponds to `delta_iv` = +40 ms. A minority of CRT patients also show native LV-before-RV activation (3% of LBBB, 19% of non-LBBB, i.e. the complements of the Gold 2018 figures above), giving positive `delta_iv` with no pacing. Some devices allow VV offsets to +/- 80 ms, so +40 is conservative on this side.
+
+**OUR modeling choice (the box):** uniform `delta_iv` over [-90, 40] ms. This is a modeling box, not a fitted or measured distribution. Each bound is chosen to CONTAIN the measured diseased + paced envelope while staying physiological:
+- Lower bound -90 ms: inside the measured LBBB RV-LV distribution (Gold 2018 mean 77, SD 38, top quartile >= 100 ms), below the LBBB median and within one SD of the mean, so it represents deep-but-real LBBB dyssynchrony, not an extrapolation. crtdemo's -75 is comfortably interior.
+- Upper bound +40 ms: the standard "LV pre-excited by 40 ms" sequential-pacing setting (Burri 2005), which also covers the native LV-first patients.
+- The full literature envelope is roughly [-115, +80] ms (LBBB tail past the top quartile; VV pacing to +/- 80 ms in some devices), so [-90, 40] is a conservative subset and is defensible as-is.
+
+**Honesty flag (open recommendation for Science).** The box is asymmetric and its negative magnitude (90) closely trails crtdemo's true -75, which can still read as tuned to the answer (exactly the caution in freeze-decision item 3). A symmetric [-90, 90] is equally supported by these same sources (LBBB reaches about -115; LV-preexcitation pacing reaches about +80) and would remove that appearance, at the cost of mechanically lowering `delta_iv`'s reported contraction (a wider prior). This is Science's call: the sourcing here backs either the current [-90, 40] or a symmetric [-90, 90]. It does NOT back the old narrow [-25, 25] / [-40, 40] boxes, which cannot even represent crtdemo's -75.
+
+## Identifiability cross-check (independent corroboration)
+Tanikella 2025 ran a Sobol sensitivity analysis on these same fractal-tree parameters: QRS timing is driven mainly by interactions among branch/fascicle angles and repulsivity, while single-parameter QRS features show low sensitivity to `branch_angle` and `w`. Prediction for our inverse problem: **`branch_angle` and `w` should show low posterior contraction** (the diffuse-block unidentifiability we expect). This is independent forward-model corroboration, not a result we originated. Use it as the §5.7 cross-check: low-sensitivity parameters there should be low-contraction here.
+
+## Verification note (honesty ledger)
+- The earlier Cowork gap (Sahli Costabal 2016 table unread behind a captcha) is now **closed** by the Research lane: the model-parameter ranges trace to Tanikella 2025 Table 1 (independent third party, read at full text) plus Sahli Costabal 2015 base values. Measured CVs from Maguy 2009 and Fu 2024.
+- The `delta_iv` circularity flag is now **closed**: the [-90, 40] box was previously reverse-engineered from crtdemo's true ~-75 ms. It is now sourced to measured interventricular-timing literature (Durrer 1970 normal; Gold 2018 measured LBBB RV-LV delay 77 +/- 38 ms; Burri 2005 VV pacing +/- 40 ms; Auricchio 2004 mechanism). See "delta_iv provenance" above. Verdict: [-90, 40] is defensible as-is (contained in the ~[-115, +80] ms literature envelope); a symmetric [-90, 90] is equally sourced if Science prefers to avoid the appearance of tuning.
+- **UNVERIFIED:** Auricchio 2004 exact transseptal-conduction-time ms (paywalled full text); only the qualitative RV-first / LV-last U-shaped pattern is checked from the abstract.
+- Full source ledger with DOIs/PMIDs and the checked-vs-asserted breakdown: `.claude_research/contract_a_SOURCES.md`.
+
+## References
+- Durrer et al. 1970, Total excitation of the isolated human heart, Circulation. PMID 5482907. (normal RV/LV breakthrough near-simultaneous)
+- Gold et al. 2018, Effect of Interventricular Electrical Delay on Atrioventricular Optimization for Cardiac Resynchronization Therapy, Circ Arrhythm Electrophysiol 11(8):e006055. PMID 30354310. doi:10.1161/CIRCEP.117.006055. (measured LBBB RV-LV delay 77 +/- 38 ms; `delta_iv` negative anchor)
+- Gold et al. 2011, The relationship between ventricular electrical delay and left ventricular remodelling with cardiac resynchronization therapy, Eur Heart J 32(20):2516-2524. PMID 21875862. doi:10.1093/eurheartj/ehr329. (QLV median 95 ms, corroborates late LV activation)
+- Auricchio et al. 2004, Characterization of left ventricular activation in patients with heart failure and left bundle-branch block, Circulation 109(9):1133-1139. PMID 14993135. doi:10.1161/01.CIR.0000118502.91105.f6. (U-shaped LBBB activation, line of block; mechanism)
+- Burri et al. 2005, Optimizing sequential biventricular pacing using radionuclide ventriculography, Heart Rhythm 2(9):960-965. PMID 16171751. (VV pacing programmed LV-40 to LV+40; `delta_iv` positive anchor)
+- Sahli Costabal, Hurtado, Kuhl 2015 (publ. 2016), Generating Purkinje networks in the human heart, J Biomech. PMID 26748729. (the method `purkinje-uv` implements)
+- Maguy et al. 2009, Circ Res. PMID 19359601. (Purkinje CV 2.2 m/s)
+- Fu et al. 2024, Rev Cardiovasc Med. PMID 39484125. (human myocardial CV compilation)
+- Tanikella et al. 2025, Sensitivity of ECG QRS Complexes to His-Purkinje Structure, arXiv:2505.16696. (independent fractal-tree ranges + Sobol SA)
+
+
+## Appendix B, Contract D observation-noise model (provenance, folded from observation-model.md)
+
+
+Canonical, public version of the observation-noise model, reconciled from the Research lane (`.claude_research/contract_b_OBSERVATION_MODEL.md`, now gitignored). Renamed to **Contract D** to avoid the clash with Contract B (results artifact) in `docs/contracts.md`.
+
+Naming, resolved: Contract A = theta schema (Appendix A); Contract B = results artifact; Contract C = demo API; **Contract D = observation model (this appendix)**.
+
+## Why it exists (mandatory, not optional)
+The simulator is deterministic given theta (verified: the `purkinje-uv` PCG64 rng is backend-parity infrastructure, never consumed by growth; same theta twice gives a bit-identical ECG). Training an NPE on a noise-free deterministic map gives meaninglessly perfect calibration. An explicit noise model on the ECG output is therefore required to make the identifiability question well-posed. The noise model IS the likelihood, so it must be **identical** in the training simulator, the BO+ABC baseline, and the SBC/coverage/TARP harness, or the calibration story compares different problems.
+
+## Supersedes the Day-1 placeholder
+Code's Day-1 build used 5% per-lead **relative** Gaussian noise, which the critic flagged as flattering identifiability (it preserves near-silent leads almost exactly). This Contract D replaces it with an **absolute-mV** model sourced from measured ECG reproducibility. Switch Code to this at the freeze.
+
+## The model
+Both channels come from the one theta-sweep (features are computed from the waveform), mirroring the Contract A features-vs-waveform split.
+
+**Feature channel** (additive independent Gaussian per feature, by type):
+- amplitude features (mV): sigma = 0.05 mV
+- timing/duration features (ms): sigma = 5 ms
+
+**Waveform channel** (additive white Gaussian, i.i.d. per sample per lead):
+- floor: sigma = 0.025 mV (25 uV)
+- robustness: optional SNR sweep 6, 12, 18, 24 dB (supplement, not the headline)
+
+## Realization discipline (critical for a deterministic simulator)
+- Add noise OUTSIDE `purkinje-uv`, at the feature/waveform stage. The simulator seed does not produce observation noise.
+- Draw a FRESH noise realization per training pair (theta, x). Never reuse a fixed noise vector across the set (that reintroduces determinism).
+- Fix a separate, logged noise seed so training, eval, and BO+ABC are reproducible and use the SAME model.
+- The noise used to generate SBC/coverage observations must be the same model used in training.
+
+## Day-1 verification (hand to Code)
+1. Determinism: same theta twice, no noise, assert bit-identical (done, confirmed).
+2. Noise-on: same theta twice WITH noise, assert outputs differ and empirical SD over N draws matches sigma (amplitude ~0.05 mV, timing ~5 ms, waveform ~0.025 mV).
+3. Units sanity: confirm feature units are mV and ms (not V and s) before trusting sigma.
+
+## Open decisions (freeze)
+1. Feature-set membership: which engineered features exist and whether each is amplitude-type or timing-type (drives which sigma applies). Needs Code's final feature list.
+2. Waveform sigma vs SNR: single sigma (0.025 mV) headline, SNR sweep as robustness supplement (recommended), or SNR sweep as the primary axis.
+3. Correlated vs i.i.d.: i.i.d. Gaussian is the frozen default; lead-to-lead correlation and coloured artifacts (baseline wander, powerline, EMG) are documented stretches.
+
+## Sources (independent of the thesis)
+- Obregon-Rosas et al. 2026, QRSense: portable manual ECG measurement, agreement and reproducibility, J Electrocardiol. PMID 42176693. doi:10.1016/j.jelectrocard.2026.154368. (feature-noise anchor: QRS voltage LoA -0.096 to +0.192 mV -> single-measurement sigma ~0.05 mV; QRS duration LoA -16.24 to +13.59 ms -> ~5 ms) Note: first author is Obregon-Rosas, earlier drafts wrongly said "Corrales".
+- Moody, Muldrow, Mark 1984, A noise stress test for arrhythmia detectors, Computers in Cardiology; MIT-BIH Noise Stress Test Database, PhysioNet. (conventional SNR-sweep protocol, descriptive citation only, not a per-sample sigma source)
+
+Full checked-vs-asserted ledger: `.claude_research/contract_b_OBSERVATION_MODEL.md`.
