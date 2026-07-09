@@ -35,6 +35,20 @@ from sim.forward import forward, load_geometry  # noqa: E402
 _GEOM = None
 
 
+def _stack_waves(xw: list) -> tuple[np.ndarray, np.ndarray]:
+    """Zero-pad a list of (12, T_i) clean waveforms to one (N, 12, T_max) array + true lengths.
+    T varies per draw (features collapse it, but the raw waveform does not), so we pad and carry
+    the lengths; a consumer slices ``x_wave[k, :, :x_wave_len[k]]`` to recover the exact trace."""
+    if not xw:
+        return np.zeros((0, 12, 0), dtype=float), np.zeros((0,), dtype=int)
+    lens = np.array([w.shape[1] for w in xw], dtype=int)
+    tmax = int(lens.max())
+    arr = np.zeros((len(xw), 12, tmax), dtype=float)
+    for k, w in enumerate(xw):
+        arr[k, :, : w.shape[1]] = w
+    return arr, lens
+
+
 def _init_worker() -> None:
     global _GEOM
     _GEOM = load_geometry()
@@ -54,7 +68,10 @@ def _run_one(args):
     ecg = to_physiological_mv(ecg)  # calibrate to physiological mV so the 0.025 mV noise is real
     x_clean = extract_features(ecg)
     x_noised = extract_features(add_waveform_noise_absolute(ecg, noise_sigma_mv, rng))
-    return theta_row, x_clean, x_noised
+    # Return the CLEAN (12, T) waveform too. Additive only: it adds no RNG draw and does not
+    # touch x_clean/x_noised, so the features stay byte-identical to the pre-waveform sweep.
+    # Storing it lets sigma/amplitude retrains re-noise + re-feature with no re-simulation.
+    return theta_row, x_clean, x_noised, ecg
 
 
 def run_sweep(n: int, noise_sigma_mv: float, n_workers: int, seed: int = 0):
@@ -98,6 +115,7 @@ def run_sweep_checkpointed(
     th_ok: list = []
     xc: list = []
     xn: list = []
+    xw: list = []  # clean (12, T_i) waveforms, variable length per draw
 
     if checkpoint_path and Path(checkpoint_path).exists():
         with np.load(checkpoint_path) as d:  # context-close so the later atomic replace works
@@ -105,18 +123,24 @@ def run_sweep_checkpointed(
             th_ok = list(d["theta"]) if d["theta"].size else []
             xc = list(d["x_clean"]) if d["x_clean"].size else []
             xn = list(d["x_noised"]) if d["x_noised"].size else []
+            if "x_wave" in d and d["x_wave"].size:  # unpad back to per-draw (12, T_i)
+                lens = d["x_wave_len"]
+                xw = [d["x_wave"][k, :, : int(lens[k])] for k in range(d["x_wave"].shape[0])]
         print(f"[sweep] resumed: {len(th_ok)} usable from {len(done)} done draws", flush=True)
 
     def _save() -> None:
         if not checkpoint_path:
             return
         tmp = str(checkpoint_path) + ".tmp.npz"  # must end in .npz; np.savez appends it otherwise
+        wave, wave_len = _stack_waves(xw)
         np.savez(
             tmp,
             done=np.array(sorted(done), dtype=int),
             theta=np.array(th_ok, dtype=float),
             x_clean=np.array(xc, dtype=float),
             x_noised=np.array(xn, dtype=float),
+            x_wave=wave,  # (usable, 12, T_max) zero-padded clean waveforms
+            x_wave_len=wave_len,  # (usable,) true T_i per draw
         )
         _os.replace(tmp, checkpoint_path)
 
@@ -134,6 +158,7 @@ def run_sweep_checkpointed(
                     th_ok.append(r[0])
                     xc.append(r[1])
                     xn.append(r[2])
+                    xw.append(np.asarray(r[3], dtype=float))
                 completed += 1
                 if completed % save_every == 0:
                     _save()
