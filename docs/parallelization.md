@@ -19,9 +19,8 @@ Shared/append-only files (rarely edited, coordinate first): `CLAUDE.md`, `docs/c
 ## Worktree workflow
 
 ```bash
-# one-time, AFTER kickoff (12:30 ET) and an initial commit on main/develop
+# one-time, AFTER kickoff (12:30 ET) and an initial commit on main
 git init && git add -A && git commit -m "chore: scaffold"   # director does this once
-git branch develop
 
 # spin up a parallel track (creates ../ecg-purkinje-npe-<track> on branch track/<track>)
 scripts/new-agent-worktree.sh science
@@ -40,17 +39,17 @@ Each worktree is a full checkout on its own branch, four agents can run at once,
 
 1. **Contracts frozen (Day 2):** after this, tracks run independent.
 2. **Mock → real (Day 4→5):** Science's real results artifact replaces Design's mock; Infra swaps mock `/infer` for real inference.
-3. **Integration (Day 5):** merge tracks into `develop`; run full test + demo smoke.
+3. **Integration (Day 5):** merge tracks into `main`; run full test + demo smoke.
 
-Between sync points: each track merges `develop` **into** its branch daily (stay current), but only merges **out** at sync points or when a unit is done + green. Rebased, small, frequent merges beat one big merge.
+Between sync points: each track merges `main` **into** its branch daily (stay current), but only merges **out** at sync points or when a unit is done + green. Rebased, small, frequent merges beat one big merge.
 
 ## Rules of the swarm
 
 - **Own your paths.** Cross-lane edits require a director heads-up (avoids merge pain).
-- **Green before merge.** `uv run pytest` (and `ui` type-check for Design) must pass before merging to `develop`.
+- **Green before merge.** `uv run pytest` (and `ui` type-check for Design) must pass before merging to `main`.
 - **Contracts are law.** Build to `contracts.md`; propose changes to the director, don't unilaterally drift.
 - **Critic is read-only.** The `critic` subagent reviews and reports; it never edits, mirrors the reviewer passes that caught the Grandits paper and the determinism bug.
-- **Director integrates.** Ricardo (with Cowork) owns merges to `develop`, the daily standup, and every scientific-claim approval.
+- **Director integrates.** Ricardo (with Cowork) owns merges to `main`, the daily standup, and every scientific-claim approval.
 
 ## How to hand a task to a subagent
 
