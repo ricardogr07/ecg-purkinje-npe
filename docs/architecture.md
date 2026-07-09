@@ -37,7 +37,7 @@ flowchart LR
 
 **What.** A deterministic map from parameters to a 12-lead ECG on a fixed heart.
 
-**How.** `purkinje-uv` grows LV and RV fractal Purkinje trees from `FractalTreeParameters`. `myocardial-mesh` then runs the Purkinje-to-myocardium coupling loop (`run_ecg_core`): a Purkinje activation pass, a volumetric myocardial eikonal (FIM) solve seeded at the Purkinje-muscle junctions, then a lead-field integral (`new_get_ecg`) that produces the 12 leads. Deterministic given all inputs (confirmed: same inputs give a bit-identical ECG).
+**How.** `purkinje-uv` grows LV and RV fractal Purkinje trees from `FractalTreeParameters`. `myocardial-mesh` then runs the Purkinje-to-myocardium coupling loop (`run_ecg_core`): a Purkinje activation pass, a volumetric myocardial eikonal (FIM) solve seeded at the Purkinje-muscle junctions, then a lead-field integral (`new_get_ecg`, synthesized with a `1/|r|` infinite-homogeneous-medium kernel at assumed standard electrode positions; no torso volume conductor) that produces the 12 leads. Deterministic given all inputs (confirmed: same inputs give a bit-identical ECG).
 
 **Why.** Because it is deterministic, an explicit observation-noise model is mandatory, otherwise calibration is artificially perfect. Determinism also means different networks come from discrete structural choices (mainly the seed nodes), not random draws.
 
@@ -49,7 +49,7 @@ flowchart TD
   GT --> CL{"run_ecg_core<br/>coupling loop, kmax=2"}
   CL -->|"Purkinje pass"| MY["myocardium FIM solve<br/>seeded at PMJs"]
   MY -->|"activation field"| CL
-  CL --> LF["new_get_ecg<br/>lead-field integral"]
+  CL --> LF["new_get_ecg<br/>1/r kernel, no torso"]
   LF --> ECG["12-lead ECG"]
 ```
 

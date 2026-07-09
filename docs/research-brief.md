@@ -72,7 +72,7 @@ Macro/micro stays only as the **narrative hook**; the measured boundary + correl
 
 ## 4. Dataset & how we use it
 
-**Primary (headline):** Strocchi et al. 2020, *Publicly Available Virtual Cohort of Four-chamber Heart Meshes* (Zenodo 3890034, **CC-BY-4.0**). Volumetric tetrahedral four-chamber meshes (Ensight `case`/`geo`; finer VTK), element tags (LV myo=1, RV myo=2, …), rule-based fibers, universal ventricular coordinates (UVCs), CRT RV electrode.
+**Primary (headline):** Strocchi et al. 2020, *Publicly Available Virtual Cohort of Four-chamber Heart Meshes* (Zenodo 3890034, **CC-BY-4.0**). Volumetric tetrahedral four-chamber meshes (Ensight `case`/`geo`; finer VTK), element tags (LV myo=1, RV myo=2, …), rule-based fibers, universal ventricular coordinates (UVCs), CRT RV electrode. Journal record: Strocchi M, et al. "Publicly available virtual cohorts of four-chamber heart meshes for cardiac electro-mechanics simulations." PLoS ONE 2020;15(6):e0235145. DOI 10.1371/journal.pone.0235145; PMID 32589679. CC-BY-4.0.
 
 **MVP scope:** **one geometry, clean end-to-end.** Pull a single coarse (1.1 mm) mesh, not the full 22.5 GB.
 
@@ -315,6 +315,7 @@ Tanikella 2025 ran a Sobol sensitivity analysis on these same fractal-tree param
 
 ## Appendix B, Contract D observation-noise model (provenance, folded from observation-model.md)
 
+> TODO(amplitude-rule): pending the infra track's Strocchi reference-theta peak-mV measurement. Will state that the physiological-mV scale is set by normalizing forward(REFERENCE_THETA)'s peak QRS to a fixed target on EACH geometry independently, so the rule (target-peak normalization) is shared between crtdemo and Strocchi while the resulting numeric scale factor is not, and that this equal-target normalization is what makes any cross-geometry CRLB comparison valid (matched SNR by construction) rather than an artifact of two different rescaling choices.
 
 Canonical, public version of the observation-noise model, reconciled from the Research lane (`.claude_research/contract_b_OBSERVATION_MODEL.md`, now gitignored). Renamed to **Contract D** to avoid the clash with Contract B (results artifact) in `docs/contracts.md`.
 
