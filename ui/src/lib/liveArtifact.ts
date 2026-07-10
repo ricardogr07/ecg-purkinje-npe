@@ -8,8 +8,8 @@
 // `npm run build` (e.g. an `ENV` line in Dockerfile.demo's ui build stage).
 //
 // ponytail: only the observation panels (EcgOverlay, ActivationMap) read this
-// hook today; CornerPlot/PinnedUnknowable/CalibrationPanel/Header still read
-// the static bake even in live mode. Wire paramSummary()/sampleColumn() etc.
+// hook today; CornerPlot/IdentifiabilitySpectrum/CalibrationPanel/Header still
+// read the static bake even in live mode. Wire paramSummary()/sampleColumn() etc.
 // (lib/artifact.ts) to take an artifact argument if those need to go live too.
 import { useEffect, useState } from "react";
 import { results as baked, geometry as bakedGeometry, type ResultsArtifact, type Geometry } from "./artifact";

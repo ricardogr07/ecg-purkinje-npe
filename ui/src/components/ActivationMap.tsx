@@ -20,12 +20,16 @@ function normalize(v: number[]): [number, number, number] {
 export default function ActivationMap() {
   const { results, geometry } = useArtifact();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const angleRef = useRef(0.5);
+  const angleRef = useRef(0.5); // azimuth (orbit about the long axis)
+  const elevRef = useRef(1.32); // elevation (view tilt), long axis roughly vertical
+  const zoomRef = useRef(1); // wheel zoom multiplier
   const sweepRef = useRef(1); // 1 = fully activated (whole map shown)
   const playingRef = useRef(false);
-  const rotatingRef = useRef(true);
+  const rotatingRef = useRef(false); // auto-orbit defaults to PAUSED (D-07)
+  const draggingRef = useRef(false);
+  const lastPointer = useRef<{ x: number; y: number } | null>(null);
   const [playing, setPlaying] = useState(false);
-  const [rotating, setRotating] = useState(true);
+  const [rotating, setRotating] = useState(false);
   const [sweepPct, setSweepPct] = useState(100);
   const [showPk, setShowPk] = useState(true);
   const showPkRef = useRef(true);
@@ -34,7 +38,11 @@ export default function ActivationMap() {
   const faces = geometry?.faces;
   const lat = results.activation_map?.values;
   const chamber = geometry?.chamber;
-  const purk = geometry?.purkinje;
+  // HARD GATE: the Strocchi endocardial surface is unrepaired (F5 pending), so a
+  // Strocchi Purkinje tree would render wrong (4 PMJ/side vs crtdemo's 87/166).
+  // If the geometry is Strocchi, ship the surface + activation map with NO tree.
+  const isStrocchi = (geometry?.geometry_id ?? "").toLowerCase().includes("strocchi");
+  const purk = isStrocchi ? undefined : geometry?.purkinje;
 
   const hasGeom = !!(verts?.length && faces?.length);
   const hasLat = !!(lat?.length && lat.length === verts?.length);
@@ -71,9 +79,6 @@ export default function ActivationMap() {
     const latRange = latMax - latMin || 1;
 
     const F = faces as [number, number, number][];
-    const tilt = 1.32; // view long axis roughly vertical, apex down
-    const st = Math.sin(tilt);
-    const ctil = Math.cos(tilt);
 
     // scratch buffers
     const sx = new Float32Array(V.length);
@@ -134,7 +139,10 @@ export default function ActivationMap() {
       const a = angleRef.current;
       const ca = Math.cos(a);
       const sa = Math.sin(a);
-      const fit = (Math.min(w, h) * 0.42) / radius;
+      // elevation (view tilt) and zoom are live state, read per frame.
+      const st = Math.sin(elevRef.current);
+      const ctil = Math.cos(elevRef.current);
+      const fit = ((Math.min(w, h) * 0.42) / radius) * zoomRef.current;
       const ox = w / 2;
       const oy = h / 2;
 
@@ -271,9 +279,18 @@ export default function ActivationMap() {
     raf = requestAnimationFrame(tick);
     const onResize = () => draw();
     window.addEventListener("resize", onResize);
+    // Wheel zoom: non-passive so we can preventDefault and stop the page scrolling
+    // while the pointer is over the map.
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const f = Math.exp(-e.deltaY * 0.0015);
+      zoomRef.current = Math.max(0.4, Math.min(5, zoomRef.current * f));
+    };
+    canvas.addEventListener("wheel", onWheel, { passive: false });
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", onResize);
+      canvas.removeEventListener("wheel", onWheel);
     };
     // Re-init only when the data itself changes (a live swap), not on every
     // sweep/rotate re-render: key on run_id/geometry_id, not object identity.
@@ -311,6 +328,31 @@ export default function ActivationMap() {
     setShowPk(showPkRef.current);
   }
 
+  // Orbit by pointer drag: horizontal -> azimuth, vertical -> elevation. Grabbing
+  // the map pauses the auto-orbit so it holds still while you study it.
+  function onPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    draggingRef.current = true;
+    lastPointer.current = { x: e.clientX, y: e.clientY };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    if (rotatingRef.current) {
+      rotatingRef.current = false;
+      setRotating(false);
+    }
+  }
+  function onPointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!draggingRef.current || !lastPointer.current) return;
+    const dx = e.clientX - lastPointer.current.x;
+    const dy = e.clientY - lastPointer.current.y;
+    lastPointer.current = { x: e.clientX, y: e.clientY };
+    angleRef.current += dx * 0.01;
+    elevRef.current = Math.max(0.25, Math.min(Math.PI - 0.25, elevRef.current + dy * 0.01));
+  }
+  function onPointerUp(e: React.PointerEvent<HTMLCanvasElement>) {
+    draggingRef.current = false;
+    lastPointer.current = null;
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+  }
+
   return (
     <div>
       <div
@@ -319,9 +361,13 @@ export default function ActivationMap() {
       >
         <canvas
           ref={canvasRef}
-          className="w-full h-full"
+          className="w-full h-full touch-none cursor-grab active:cursor-grabbing"
           role="img"
-          aria-label="Rotating biventricular surface colored by local activation time; a wavefront sweep reveals the depolarization order."
+          aria-label="Biventricular surface colored by local activation time. Drag to orbit (azimuth and elevation), scroll to zoom, and play the wavefront sweep to reveal the depolarization order."
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerLeave={onPointerUp}
         />
         {hasLat ? (
           <div className="absolute top-2 left-2 rounded-md bg-black/40 px-2 py-1 font-mono text-[10px] text-zinc-300">
@@ -363,8 +409,9 @@ export default function ActivationMap() {
           className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800"
           aria-pressed={rotating}
         >
-          {rotating ? "Stop spin" : "Spin"}
+          {rotating ? "Pause auto-orbit" : "Auto-orbit"}
         </button>
+        <span className="text-[11px] text-zinc-500">drag to orbit, scroll to zoom</span>
         {purk ? (
           <button
             onClick={togglePk}
@@ -382,6 +429,11 @@ export default function ActivationMap() {
           fractal Purkinje networks (the real trees that seed this activation:{" "}
           {purk.lv.nodes.length + purk.rv.nodes.length} nodes,{" "}
           {(purk.lv.n_pmj ?? 0) + (purk.rv.n_pmj ?? 0)} Purkinje-muscle junctions).
+        </p>
+      ) : isStrocchi ? (
+        <p className="mt-2 text-[11px] text-amber-300">
+          Strocchi endocardial surface repair pending: showing the myocardial surface and activation
+          map with no Purkinje tree.
         </p>
       ) : null}
 

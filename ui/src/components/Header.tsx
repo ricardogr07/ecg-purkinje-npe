@@ -1,24 +1,29 @@
-// Sticky header with storyboard anchor nav. Mirrors the shelter-pulse NavBar
-// idiom (backdrop blur, zinc border) without the i18n machinery.
+// Sticky header + provenance strip. The strip carries the run's factual metadata
+// (run id, noise floor, geometry) and states that the page is a static export.
+// It is NOT a real/mock provenance banner: results.real.json can be is_mock:true
+// and activation_is_real:true at once, so that distinction lives per section in
+// ProvenanceChip, never here. All values read from the artifact, never hard-coded.
 import { results } from "@/lib/artifact";
 
 const LINKS = [
-  { href: "#observation", label: "Observation" },
-  { href: "#degeneracy", label: "Degeneracy" },
-  { href: "#identifiability", label: "Pinned / unknowable" },
+  { href: "#finding", label: "Finding" },
+  { href: "#why", label: "Why" },
+  { href: "#how", label: "How" },
   { href: "#calibration", label: "Calibration" },
+  { href: "#correlation", label: "Correlation" },
+  { href: "#corrections", label: "Corrections" },
+  { href: "#reproduce", label: "Reproduce" },
 ];
 
 export default function Header() {
-  // Demo-honesty rule (CLAUDE.md): a surface rendering mock data MUST be labeled illustrative
-  // until it is wired to the real artifact. mock/gen-real.mjs stamps meta.is_mock: false when it
-  // bakes a real outputs/day3_*results*.json in (see ui/mock/README.md); the committed fallback
-  // (no real run available at build time) keeps meta.is_mock: true.
-  const meta = (results.meta ?? {}) as Record<string, unknown>;
-  const isMock = Boolean(meta.is_mock);
-  const activationReal = Boolean(meta.activation_is_real);
-  const gitSha = typeof meta.git_sha === "string" ? meta.git_sha : undefined;
-  const bakedFrom = typeof meta.baked_from === "string" ? meta.baked_from : undefined;
+  const nm = results.noise_model ?? {};
+  const noiseFloor =
+    nm.amp_sigma_mv !== undefined && nm.timing_sigma_ms !== undefined
+      ? `${nm.amp_sigma_mv} mV amplitude, ${nm.timing_sigma_ms} ms timing`
+      : nm.sigma !== undefined
+        ? `${nm.sigma} mV`
+        : undefined;
+
   return (
     <>
       <nav
@@ -26,62 +31,62 @@ export default function Header() {
         className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur"
       >
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-          <a href="#top" className="flex items-center gap-2 text-sm font-bold text-zinc-100">
+          <a href="#finding" className="flex items-center gap-2 text-sm font-bold text-zinc-100">
             <span aria-hidden="true" className="text-indigo-400">
               {"</>"}
             </span>
             ECG to Purkinje
           </a>
-          <div className="hidden items-center gap-6 text-sm md:flex">
+          <div className="hidden items-center gap-5 text-sm lg:flex">
             {LINKS.map((l) => (
               <a key={l.href} href={l.href} className="text-zinc-400 hover:text-indigo-300">
                 {l.label}
               </a>
             ))}
+            <a
+              href="https://github.com/ricardogr07/ecg-purkinje-npe"
+              className="text-zinc-400 hover:text-indigo-300"
+            >
+              Paper
+            </a>
           </div>
         </div>
       </nav>
-      {isMock ? (
-        <div
-          role="note"
-          className="border-b border-amber-500/40 bg-amber-500/10 px-4 py-2 text-center text-xs text-amber-200"
-        >
-          {activationReal ? (
+
+      {/* provenance strip: factual run metadata + delivery mechanism */}
+      <div className="sticky top-14 z-40 border-b border-zinc-800 bg-zinc-950/70 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-1.5 font-mono text-[11px] text-zinc-500">
+          {results.run_id ? (
+            <span>
+              run <span className="text-zinc-300">{results.run_id}</span>
+            </span>
+          ) : null}
+          {noiseFloor ? (
+            <span aria-hidden="true" className="text-zinc-700">
+              ·
+            </span>
+          ) : null}
+          {noiseFloor ? (
+            <span>
+              noise floor <span className="text-zinc-300">{noiseFloor}</span>
+            </span>
+          ) : null}
+          {results.geometry_id ? (
             <>
-              The <span className="font-semibold">activation map and 12-lead ECG are real</span>{" "}
-              (forward model at the honest operating point). The{" "}
-              <span className="font-semibold">posterior and calibration panels are illustrative</span>{" "}
-              mock, real calibrated posteriors are served by the API at{" "}
-              <code className="rounded bg-black/30 px-1">/infer</code>. Synthetic-truth, not
-              real-ECG-validated.
-            </>
-          ) : (
-            <>
-              <span className="font-semibold">Illustrative demo.</span> These visualizations use
-              representative <span className="font-semibold">mock</span> data; real calibrated
-              posteriors are served at{" "}
-              <code className="rounded bg-black/30 px-1">/infer</code>.
-            </>
-          )}
-        </div>
-      ) : (
-        <div
-          role="note"
-          className="border-b border-zinc-800 bg-zinc-900/60 px-4 py-2 text-center text-xs text-zinc-400"
-        >
-          <span className="font-semibold text-zinc-300">Precomputed from a real run</span>:{" "}
-          <code className="rounded bg-black/30 px-1">{results.run_id}</code>
-          {gitSha ? (
-            <>
-              {" "}
-              (commit <code className="rounded bg-black/30 px-1">{gitSha}</code>)
+              <span aria-hidden="true" className="text-zinc-700">
+                ·
+              </span>
+              <span>
+                geometry <span className="text-zinc-300">{results.geometry_id}</span>
+              </span>
             </>
           ) : null}
-          {bakedFrom ? <> from <code className="rounded bg-black/30 px-1">{bakedFrom}</code></> : null}.
-          Static export, values are baked at build time, not fetched live.
-          {results.synthetic_truth ? " Synthetic-truth study, not a real-patient fit." : ""}
+          <span className="ml-auto inline-flex items-center gap-1.5">
+            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
+            precomputed static export
+          </span>
         </div>
-      )}
+      </div>
     </>
   );
 }

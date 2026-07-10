@@ -37,17 +37,20 @@ export function rgb([r, g, b]: [number, number, number], alpha = 1): string {
   return alpha >= 1 ? `rgb(${r},${g},${b})` : `rgba(${r},${g},${b},${alpha})`;
 }
 
-// Identifiability -> semantic color. Low contraction = pinned (emerald),
-// high contraction = unknowable (rose). Threshold picked for the demo copy.
+// Identifiability -> semantic color, at a stated noise floor. Low contraction =
+// resolved (emerald), mid = partial (amber), high = unresolved (grey). A parameter
+// is unresolved at THIS noise floor and may resolve at a lower one, never a claim
+// about the absolute. Thresholds are the spectrum's meaning: change only via a
+// DECISIONS entry (docs PROVENANCE.md, colormap thresholds).
 export function identifiabilityColor(contraction: number | undefined): {
   cls: string;
   hex: string;
-  label: "pinned" | "partial" | "unknowable";
+  label: "resolved" | "partial" | "unresolved";
 } {
   if (contraction === undefined || Number.isNaN(contraction)) {
     return { cls: "text-zinc-400", hex: "#a1a1aa", label: "partial" };
   }
-  if (contraction <= 0.45) return { cls: "text-emerald-400", hex: "#34d399", label: "pinned" };
-  if (contraction <= 0.7) return { cls: "text-amber-400", hex: "#fbbf24", label: "partial" };
-  return { cls: "text-rose-400", hex: "#fb7185", label: "unknowable" };
+  if (contraction <= 0.45) return { cls: "text-emerald-400", hex: "#34d399", label: "resolved" };
+  if (contraction <= 0.6) return { cls: "text-amber-400", hex: "#fbbf24", label: "partial" };
+  return { cls: "text-zinc-400", hex: "#a1a1aa", label: "unresolved" };
 }

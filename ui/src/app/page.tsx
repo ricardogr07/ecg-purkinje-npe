@@ -1,167 +1,185 @@
 import Header from "@/components/Header";
-import { Section, Card, Chip } from "@/components/Layout";
-import EcgOverlay from "@/components/EcgOverlay";
-import ActivationMap from "@/components/ActivationMap";
-import CornerPlot from "@/components/CornerPlot";
-import PinnedUnknowable from "@/components/PinnedUnknowable";
+import Footer from "@/components/Footer";
+import { Section, Card } from "@/components/Layout";
+import ProvenanceChip, { type Provenance } from "@/components/ProvenanceChip";
+import Pending from "@/components/Pending";
+import Hero from "@/components/Hero";
+import IdentifiabilitySpectrum from "@/components/IdentifiabilitySpectrum";
+import WhyItMatters from "@/components/WhyItMatters";
+import HowItWorks from "@/components/HowItWorks";
 import CalibrationPanel from "@/components/CalibrationPanel";
+import CornerPlot from "@/components/CornerPlot";
+import WhatWeGotWrong from "@/components/WhatWeGotWrong";
+import WhatThisIsNot from "@/components/WhatThisIsNot";
+import Reproduce from "@/components/Reproduce";
 import { results } from "@/lib/artifact";
 
-function meta(key: string): string | number | undefined {
-  const v = results.meta?.[key];
-  return typeof v === "string" || typeof v === "number" ? v : undefined;
-}
+// Spine order (argumentative, not workflow): finding first, then why it matters,
+// how it works, is the uncertainty honest, the one correlated case, what we got
+// wrong, the limits, reproduce, and the conditional real heart. See the demo
+// brief and DESIGN_SPEC. Provenance is per section via chips, never a page banner.
 
 export default function Home() {
-  const nSamples = results.posterior?.samples?.length;
-  const noise = results.noise_model;
+  // Data-driven provenance: the posterior-derived panels are the honest 7D run
+  // once it bakes in (is_mock:false -> precomputed), and mock until then
+  // (is_mock:true -> illustrative). Never label a mock as real.
+  const meta = (results.meta ?? {}) as Record<string, unknown>;
+  const isMock = Boolean(meta.is_mock);
+  const posteriorKind: Provenance = isMock ? "illustrative" : "precomputed";
+  const spectrumNote = isMock
+    ? "mock contraction numbers, pending the production run"
+    : "contraction numbers from the 7D posterior run";
+  const calibrationNote = isMock
+    ? "mock calibration diagnostics, pending the production run"
+    : "calibration diagnostics from the 7D posterior run";
+  const cornerNote = isMock
+    ? "mock posterior samples, pending the production run"
+    : "posterior samples from the 7D posterior run";
 
   return (
     <>
       <Header />
       <main id="main" className="flex-1">
-        {/* hero */}
-        <div id="top" className="border-b border-zinc-800">
+        {/* 1. finding: the hero + the spectrum */}
+        <section id="finding" className="scroll-mt-28 border-b border-zinc-800">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
-            <div className="flex flex-wrap gap-2">
-              <Chip tone="indigo">amortized NPE</Chip>
-              <Chip tone="emerald">formally calibrated</Chip>
-              {results.synthetic_truth ? <Chip tone="amber">synthetic-truth study</Chip> : null}
+            <ProvenanceChip kind={posteriorKind} note={spectrumNote} />
+            <div className="mt-5">
+              <Hero />
             </div>
-            <h1 className="mt-5 max-w-4xl text-4xl font-bold tracking-tight text-zinc-50 sm:text-6xl">
-              Which Purkinje conduction parameters can the surface ECG pin down?
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-zinc-300">
-              We train a neural posterior over 7 conduction parameters at fixed anatomy and report,
-              with formal calibration, exactly which ones the 12-lead ECG constrains and which it
-              cannot. The answer is a per-parameter identifiability spectrum, not a single fit.
-            </p>
-            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-zinc-500">
-              This is a calibrated-identifiability study on the simulator (synthetic ground truth),
-              not a fit to a real-patient ECG. The honest question is what the ECG can and cannot
-              resolve, with uncertainty you can trust.
-            </p>
-
-            {/* run metadata */}
-            <dl className="mt-8 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4">
-              {[
-                { k: "geometry", v: results.geometry_id },
-                { k: "method", v: meta("sbi_method") },
-                { k: "sim budget", v: meta("sim_budget") },
-                { k: "posterior draws", v: nSamples },
-                { k: "observation", v: results.observation_kind },
-                { k: "noise model", v: noise?.kind },
-                { k: "waveform sigma", v: noise?.sigma !== undefined ? `${noise.sigma} mV` : undefined },
-                { k: "run", v: results.run_id },
-              ]
-                .filter((x) => x.v !== undefined)
-                .map((x) => (
-                  <div key={x.k} className="rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2">
-                    <dt className="text-[10px] uppercase tracking-wide text-zinc-500">{x.k}</dt>
-                    <dd className="mt-0.5 font-mono text-sm text-zinc-200 wrap-break-word">{String(x.v)}</dd>
-                  </div>
-                ))}
-            </dl>
-          </div>
-        </div>
-
-        {/* 1. observation + forward */}
-        <Section
-          id="observation"
-          eyebrow="the observation and the forward"
-          title="One 12-lead ECG, one activation sequence"
-          lead="The input is a 12-lead waveform. The forward model turns conduction parameters into a ventricular activation sequence and, through it, the ECG. Watch the depolarization wavefront sweep the biventricular surface."
-        >
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card title="12-lead ECG" hint="observed vs posterior-predictive">
-              <EcgOverlay />
-            </Card>
-            <Card title="Ventricular activation map" hint="local activation time (ms)">
-              <ActivationMap />
-            </Card>
-          </div>
-        </Section>
-
-        {/* 2. degeneracy */}
-        <Section
-          id="degeneracy"
-          eyebrow="the posterior"
-          title="The posterior is degenerate, and that is the finding"
-          lead="Different conduction parameters produce near-identical ECGs. The corner plot exposes it: a tight ridge between Purkinje conduction velocity and LV early-activation extent means the ECG constrains their combination, not each one alone."
-        >
-          <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-            <Card>
-              <CornerPlot />
-            </Card>
-            <div className="space-y-4">
-              <Card title="Reading the plot">
-                <ul className="space-y-3 text-sm text-zinc-400">
-                  <li>
-                    <span className="font-mono text-zinc-200">Diagonal</span>: each parameter&apos;s
-                    marginal posterior, colored by how well the ECG pins it.
-                  </li>
-                  <li>
-                    <span className="font-mono text-zinc-200">Lower cells</span>: pairwise samples. A
-                    diagonal cloud is a degeneracy: the pair trades off.
-                  </li>
-                  <li>
-                    <span className="font-mono text-amber-300">The amber cell</span>: the cv to L0_LV
-                    ridge, the headline non-identifiability.
-                  </li>
-                  <li>
-                    <span className="font-mono text-zinc-200">Upper cells</span>: correlation between
-                    parameters.
-                  </li>
-                </ul>
-              </Card>
-              <Card title="Why it matters">
-                <p className="text-sm text-zinc-400">
-                  A single best-fit would hide this. The calibrated posterior shows the ECG measures a
-                  combination faithfully while leaving each ingredient uncertain, exactly the kind of
-                  finding a point estimate cannot express.
-                </p>
-              </Card>
+            <div className="mt-12">
+              <IdentifiabilitySpectrum />
+            </div>
+            <div className="mt-8 max-w-2xl">
+              <Pending
+                label="Colouring the bars by CRLB"
+                reason="The bars are coloured by contraction today. Once the Fisher information (CRLB) Jacobian lands, colour will come from CRLB so the bars do not shift when a prior is retuned. The printed contraction number stays as is."
+                falsify="If CRLB and contraction disagree on which parameters are resolved, the spectrum ordering is not robust and needs a rethink."
+              />
             </div>
           </div>
-        </Section>
+        </section>
 
-        {/* 3. pinned vs unknowable */}
+        {/* 2. why it matters */}
         <Section
-          id="identifiability"
-          eyebrow="the identifiability spectrum"
-          title="This one is pinned. This one is unknowable."
-          lead="Contraction ranks each parameter by how much the ECG narrows it from its prior. Some collapse to a tight interval. Others barely move. Same ECG, opposite verdicts."
+          id="why"
+          eyebrow="why it matters"
+          title="The ECG resolves the parameter clinicians actually use"
         >
-          <PinnedUnknowable />
+          <WhyItMatters />
         </Section>
 
-        {/* 4. calibration */}
+        {/* 3. how it works */}
+        <Section
+          id="how"
+          eyebrow="how it works"
+          title="Simulate many hearts, learn to invert, check the confidence is honest"
+          lead="Four steps. This is the only technical section, and it reads without any prior knowledge of neural networks."
+        >
+          <HowItWorks />
+        </Section>
+
+        {/* 4. is the uncertainty honest? */}
         <Section
           id="calibration"
-          eyebrow="findings you can trust"
+          eyebrow="is the uncertainty honest?"
           title="Calibrated, so the intervals mean what they say"
-          lead="An identifiability claim is only as good as its calibration. Simulation-based calibration and expected coverage (TARP) test whether the posterior intervals are honest. Toggle conformal calibration and watch the ranks flatten and the coverage curve snap to the diagonal."
+          lead="An identifiability claim is only as good as its calibration. Simulation based calibration checks, one parameter at a time, whether the posterior intervals are honest. Toggle conformal recalibration and watch the ranks flatten."
         >
-          <CalibrationPanel />
+          <div className="space-y-4">
+            <ProvenanceChip kind={posteriorKind} note={calibrationNote} />
+            <CalibrationPanel />
+          </div>
         </Section>
 
-        {/* footer */}
-        <footer className="border-t border-zinc-800 py-12">
-          <div className="mx-auto max-w-6xl px-4 text-sm text-zinc-500">
-            <p className="max-w-3xl">
-              Amortized calibrated identifiability of the Purkinje conduction system from the surface
-              ECG. Neural Posterior Estimation (sbi) over conduction parameters at fixed anatomy on a
-              public heart mesh. The contribution is a scientific finding: which parameters the ECG
-              can and cannot resolve, with calibrated uncertainty.
-            </p>
-            <p className="mt-4 text-xs text-zinc-400">
-              Synthetic-truth study on the simulator. Not validated against a real-patient ECG. Values
-              shown are from a mock Contract-B artifact pending the production run. Strocchi mesh cohort
-              is CC-BY-4.0.
-            </p>
+        {/* 5. the correlated pair */}
+        <Section
+          id="correlation"
+          eyebrow="the correlated pair"
+          title="Correlated, but still identifiable"
+          lead="Some parameters trade off against each other and the ECG constrains their combination tightly while leaving each one looser. That is correlation, not a failure to resolve."
+        >
+          <div className="space-y-4">
+            <ProvenanceChip kind={posteriorKind} note={cornerNote} />
+            <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+              <Card>
+                <CornerPlot />
+              </Card>
+              <div className="space-y-4">
+                <Card title="Reading the plot">
+                  <ul className="space-y-3 text-sm text-zinc-400">
+                    <li>
+                      <span className="font-mono text-zinc-200">Diagonal</span>: each parameter&apos;s
+                      marginal posterior, coloured by how well the ECG resolves it.
+                    </li>
+                    <li>
+                      <span className="font-mono text-zinc-200">Lower cells</span>: pairwise samples.
+                      A tilted cloud means the pair is correlated.
+                    </li>
+                    <li>
+                      <span className="font-mono text-amber-300">The amber cell</span>: the cv to
+                      L0_LV pair, the clearest correlated but identifiable case.
+                    </li>
+                    <li>
+                      <span className="font-mono text-zinc-200">Upper cells</span>: correlation
+                      strength between parameters.
+                    </li>
+                  </ul>
+                </Card>
+                <Card title="Why it matters">
+                  <p className="text-sm text-zinc-400">
+                    A single best fit would hide this. The calibrated posterior shows the ECG
+                    measures a combination faithfully while leaving each ingredient looser, the kind
+                    of finding a point estimate cannot express.
+                  </p>
+                </Card>
+              </div>
+            </div>
           </div>
-        </footer>
+        </Section>
+
+        {/* 6. what we got wrong */}
+        <Section
+          id="corrections"
+          eyebrow="what we got wrong"
+          title="Four things we believed, and what changed our minds"
+          lead="This is the most persuasive part of the page. It sits below the calibration section because you need to know what calibration is before you can see what it caught. The formal ledger lives in the paper."
+        >
+          <WhatWeGotWrong />
+        </Section>
+
+        {/* 7. what this is not */}
+        <Section id="limits" eyebrow="what this is not" title="Read this before you cite it">
+          <WhatThisIsNot />
+        </Section>
+
+        {/* 8. reproduce it */}
+        <Section
+          id="reproduce"
+          eyebrow="reproduce it"
+          title="Everything you need to run it yourself"
+          lead="The finding is a static export from a named run. The code, the weights, and the environment are open."
+        >
+          <Reproduce />
+        </Section>
+
+        {/* 9. conditional: the real heart (wireframe only until the export lands) */}
+        <Section
+          id="generalize"
+          eyebrow="the real heart"
+          title="The pipeline generalizes"
+          lead="The same steps run on a public anatomy. This is a claim about the method, not a second result, and it appears only in wireframe until the export lands."
+        >
+          <div className="max-w-2xl">
+            <Pending
+              label="The same pipeline on the public Strocchi anatomy"
+              reason="The real-heart export is not wired into this page yet. When it lands, this section shows the myocardial surface with an activation map, and the Purkinje tree only if the endocardial surface repair passes."
+              falsify="If the identifiability spectrum on Strocchi disagrees with crtdemo on which parameters are resolved, the finding does not generalize."
+            />
+          </div>
+        </Section>
       </main>
+      <Footer />
     </>
   );
 }
