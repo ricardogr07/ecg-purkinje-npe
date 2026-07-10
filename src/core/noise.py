@@ -57,3 +57,34 @@ def add_waveform_noise(ecg: np.ndarray, noise_frac: float, rng: np.random.Genera
     ecg = np.asarray(ecg, dtype=float)
     sigma = noise_frac * ecg.std(axis=1, keepdims=True)  # (12, 1)
     return ecg + rng.normal(scale=np.maximum(sigma, 1e-12), size=ecg.shape)
+
+
+def add_feature_noise(
+    features: np.ndarray,
+    sigma_amp_mv: float,
+    sigma_time_ms: float,
+    t_samples: int,
+    fs_hz: float,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """Feature-level Contract D noise (the mode stubbed in features.FEATURE_KINDS).
+
+    Adds noise per feature by kind: amp-kind features (mV) get sigma_amp_mv; timing-kind
+    features are dimensionless fractions of T, so a sigma_time_ms floor is expressed in
+    fraction-of-T units (sigma_time_ms / total_duration_ms, total = t_samples / fs_hz).
+
+    Unlike add_waveform_noise_absolute, the timing floor is INDEPENDENT of signal amplitude,
+    so scaling the waveform amplitude changes only the amp-feature SNR (leaving timing SNR
+    fixed). This is what makes the amplitude-vs-timing corner a genuinely different point in
+    observation space, not a reparameterization of a sigma corner.
+    """
+    from core.features import FEATURE_KINDS
+
+    features = np.asarray(features, dtype=float)
+    ms_per_sample = 1000.0 / float(fs_hz)
+    sigma_time_frac = float(sigma_time_ms) / (float(t_samples) * ms_per_sample)
+    out = features.copy()
+    for i, kind in enumerate(FEATURE_KINDS):
+        s = sigma_amp_mv if kind == "amp" else sigma_time_frac
+        out[i] += rng.normal(scale=max(float(s), 1e-12))
+    return out
