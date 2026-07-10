@@ -16,6 +16,7 @@ the ~338k-pt Strocchi mesh is minutes).
 Run: uv run --no-sync python experiments/strocchi_forward.py
 """
 
+import argparse
 import json
 import sys
 import time
@@ -38,8 +39,25 @@ DECIM_TARGET_FACES = 12000  # browser budget (crtdemo is ~6k); ActivationMap pai
 
 
 def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--case", default=None, help="path to NN.case (default: adapter's heart 01)")
+    ap.add_argument("--cache", default=None, help="per-heart forward-inputs cache dir")
+    ap.add_argument(
+        "--geom-id", default="strocchi_01", help="geometry_id (must contain 'strocchi')"
+    )
+    ap.add_argument(
+        "--out-base", default="strocchi", help="ui/mock/geometry.<out-base>.json basename"
+    )
+    args = ap.parse_args()
+    geom_id, out_base = args.geom_id, args.out_base
+
     t0 = time.time()
-    geom = load_geometry()
+    load_kwargs = {}
+    if args.case:
+        load_kwargs["case_path"] = args.case
+    if args.cache:
+        load_kwargs["cache_dir"] = args.cache
+    geom = load_geometry(**load_kwargs)
     tc = geom.tree_config
     n_lv = int(np.asarray(tc.lv_tree.pmj).size)
     n_rv = int(np.asarray(tc.rv_tree.pmj).size)
@@ -110,21 +128,21 @@ def main() -> None:
     )
 
     geometry = {
-        "geometry_id": "strocchi_01",
+        "geometry_id": geom_id,
         "units": "mm",
         "n_vertices": int(verts.shape[0]),
         "n_faces": int(faces.shape[0]),
         "vertices": np.round(verts, 3).tolist(),
         "faces": faces.tolist(),
     }
-    (OUT / "geometry.strocchi.json").write_text(json.dumps(geometry))
+    (OUT / f"geometry.{out_base}.json").write_text(json.dumps(geometry))
 
     results = {
-        "run_id": "strocchi_01",
-        "geometry_id": "strocchi_01",
+        "run_id": geom_id,
+        "geometry_id": geom_id,
         "observation_kind": "features",
         "activation_map": {
-            "mesh_ref": "strocchi_01",
+            "mesh_ref": geom_id,
             "units": "ms",
             "values": np.round(slat, 2).tolist(),
         },
@@ -143,10 +161,10 @@ def main() -> None:
             "forward_seconds": round(dt_fwd, 1),
         },
     }
-    (OUT / "results.strocchi.json").write_text(json.dumps(results))
+    (OUT / f"results.{out_base}.json").write_text(json.dumps(results))
     assert len(results["activation_map"]["values"]) == geometry["n_vertices"], "LAT/vertex mismatch"
     print(
-        f"[strocchi] wrote geometry.strocchi.json + results.strocchi.json "
+        f"[strocchi] wrote geometry.{out_base}.json + results.{out_base}.json "
         f"(total {time.time() - t0:.1f}s)",
         flush=True,
     )
