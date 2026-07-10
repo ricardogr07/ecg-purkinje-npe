@@ -1,10 +1,10 @@
 """Geometry adapters. A common entry point so the pipeline is geometry-agnostic.
 
-crtdemo and strocchi are wired. medalcare is a Phase 3 stub. NOTE: strocchi's MyocardialMesh
-(volumetric mesh + fibers + electrodes) is wired, but `sim.forward.forward`'s Purkinje-tree
-growth still hardcodes crtdemo's own endocardial OBJ paths (see
-`adapter.strocchi.load_geometry`'s docstring) -- true cross-geometry parity needs that
-parametrized, not yet done here.
+crtdemo and strocchi are wired. medalcare is a Phase 3 stub. Both crtdemo and strocchi attach a
+`geom.tree_config`, so `sim.forward.forward` builds the Purkinje trees on the SAME heart it runs
+the eikonal on: crtdemo grows fractal trees on its own endocardium, strocchi carries the F5
+UVC-grown trees (see `adapter.strocchi.load_geometry`). No identifiability result is claimed on
+the strocchi geometry (method generality only).
 """
 
 from __future__ import annotations

@@ -12,7 +12,11 @@ import CornerPlot from "@/components/CornerPlot";
 import WhatWeGotWrong from "@/components/WhatWeGotWrong";
 import WhatThisIsNot from "@/components/WhatThisIsNot";
 import Reproduce from "@/components/Reproduce";
+import ActivationMap from "@/components/ActivationMap";
 import { results } from "@/lib/artifact";
+import type { Geometry, ResultsArtifact } from "@/lib/artifact";
+import strocchiGeometry from "@mock/geometry.strocchi.json";
+import strocchiResults from "@mock/results.strocchi.json";
 
 // Spine order (argumentative, not workflow): finding first, then why it matters,
 // how it works, is the uncertainty honest, the one correlated case, what we got
@@ -163,19 +167,26 @@ export default function Home() {
           <Reproduce />
         </Section>
 
-        {/* 9. conditional: the real heart (wireframe only until the export lands) */}
+        {/* 9. the real heart: method generalizes to public Strocchi anatomy (no finding claimed) */}
         <Section
           id="generalize"
           eyebrow="the real heart"
           title="The pipeline generalizes"
-          lead="The same steps run on a public anatomy. This is a claim about the method, not a second result, and it appears only in wireframe until the export lands."
+          lead="The same steps run on a public anatomy. This is a claim about the method, not a second result."
         >
-          <div className="max-w-2xl">
-            <Pending
-              label="The same pipeline on the public Strocchi anatomy"
-              reason="The real-heart export is not wired into this page yet. When it lands, this section shows the myocardial surface with an activation map, and the Purkinje tree only if the endocardial surface repair passes."
-              falsify="If the identifiability spectrum on Strocchi disagrees with crtdemo on which parameters are resolved, the finding does not generalize."
+          <div className="space-y-4">
+            <ActivationMap
+              geometry={strocchiGeometry as unknown as Geometry}
+              results={strocchiResults as unknown as ResultsArtifact}
             />
+            <p className="max-w-2xl text-sm text-zinc-400">
+              The pipeline ingests a public CC-BY-4.0 four-chamber mesh (Strocchi et al., PLoS ONE
+              2020), derives the endocardium from the mesh&apos;s own universal ventricular
+              coordinates, grows a Purkinje network (LV 44, RV 138 PMJs), places electrodes from the
+              heart&apos;s own axes, and synthesizes a pseudo-ECG. This demonstrates that the method
+              generalizes to real anatomy. No identifiability result is claimed on this geometry:
+              crtdemo&apos;s PMJ counts are 87 and 166, so this network is sparser.
+            </p>
           </div>
         </Section>
       </main>

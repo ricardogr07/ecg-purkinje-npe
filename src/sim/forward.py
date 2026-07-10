@@ -57,7 +57,13 @@ REFERENCE_THETA: dict[str, float] = {
 class TreeConfig:
     """Purkinje-tree inputs for a geometry: endocardial surfaces, root seeds, fascicles, and the
     fractal-growth constants. Attached to the geometry object (``geom.tree_config``) so ``forward``
-    grows trees on the SAME heart it runs the eikonal on, instead of silently reusing crtdemo's."""
+    grows trees on the SAME heart it runs the eikonal on, instead of silently reusing crtdemo's.
+
+    ``lv_tree``/``rv_tree`` are an optional pre-grown escape hatch: when set, ``forward`` uses those
+    ``PurkinjeTree`` objects directly and skips fractal growth (the endo/seed/fascicle/theta-growth
+    fields are then inert). This is how the Strocchi geometry runs, whose ragged UVC-thresholded
+    endocardium needs the F5 ``FractalTree(uv=...)`` growth the crtdemo harmonic-map path cannot do;
+    crtdemo leaves both None and grows as before (bit-identical)."""
 
     lv_endo: str
     rv_endo: str
@@ -70,6 +76,8 @@ class TreeConfig:
     length: float = _LENGTH
     l_segment: float = _L_SEGMENT
     n_it: int = _N_IT
+    lv_tree: PurkinjeTree | None = None
+    rv_tree: PurkinjeTree | None = None
 
 
 CRTDEMO_TREE_CONFIG = TreeConfig(
@@ -160,30 +168,38 @@ def forward(
             "geometry). Build geom via load_geometry() (crtdemo) or the mesh adapter, which attach "
             "it; forward no longer silently falls back to crtdemo's endocardium."
         )
-    lv = _build_tree(
-        tc.lv_endo,
-        seeds_lv if seeds_lv is not None else tc.lv_seeds,
-        theta["init_length_lv"],
-        tc.lv_fas_len,
-        tc.lv_fas_ang,
-        theta["branch_angle"],
-        theta["w"],
-        tc.length,
-        tc.l_segment,
-        tc.n_it,
-    )
-    rv = _build_tree(
-        tc.rv_endo,
-        seeds_rv if seeds_rv is not None else tc.rv_seeds,
-        theta["init_length_rv"],
-        tc.rv_fas_len,
-        tc.rv_fas_ang,
-        theta["branch_angle"],
-        theta["w"],
-        tc.length,
-        tc.l_segment,
-        tc.n_it,
-    )
+    # Pre-grown trees (e.g. the Strocchi F5 trees) short-circuit fractal growth; the tree-growth
+    # theta keys and seed overrides are inert in that case. crtdemo leaves these None and grows.
+    if getattr(tc, "lv_tree", None) is not None:
+        lv = tc.lv_tree
+    else:
+        lv = _build_tree(
+            tc.lv_endo,
+            seeds_lv if seeds_lv is not None else tc.lv_seeds,
+            theta["init_length_lv"],
+            tc.lv_fas_len,
+            tc.lv_fas_ang,
+            theta["branch_angle"],
+            theta["w"],
+            tc.length,
+            tc.l_segment,
+            tc.n_it,
+        )
+    if getattr(tc, "rv_tree", None) is not None:
+        rv = tc.rv_tree
+    else:
+        rv = _build_tree(
+            tc.rv_endo,
+            seeds_rv if seeds_rv is not None else tc.rv_seeds,
+            theta["init_length_rv"],
+            tc.rv_fas_len,
+            tc.rv_fas_ang,
+            theta["branch_angle"],
+            theta["w"],
+            tc.length,
+            tc.l_segment,
+            tc.n_it,
+        )
     # Contract A param 7: myocardial CV. Inert for 6D theta (key absent); rebuilds D + FIM when
     # present. delta_iv/cv above drive the Purkinje pass; cv_myo drives the myocardial eikonal.
     if "cv_myo" in theta:

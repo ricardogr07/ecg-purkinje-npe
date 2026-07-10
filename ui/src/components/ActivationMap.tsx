@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useArtifact } from "@/lib/liveArtifact";
+import type { Geometry, ResultsArtifact } from "@/lib/artifact";
 import { viridis } from "@/lib/colormap";
 import { EmptyState } from "@/components/Layout";
 
@@ -17,8 +18,14 @@ function normalize(v: number[]): [number, number, number] {
   return [v[0] / n, v[1] / n, v[2] / n];
 }
 
-export default function ActivationMap() {
-  const { results, geometry } = useArtifact();
+type ActivationMapProps = { geometry?: Geometry; results?: ResultsArtifact };
+
+// Defaults to the baked global artifact (crtdemo); pass geometry/results to render a second
+// map (e.g. the Strocchi method-generality figure) without disturbing the crtdemo instance.
+export default function ActivationMap({ geometry: geometryProp, results: resultsProp }: ActivationMapProps = {}) {
+  const art = useArtifact();
+  const geometry = geometryProp ?? art.geometry;
+  const results = resultsProp ?? art.results;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const angleRef = useRef(0.5); // azimuth (orbit about the long axis)
   const elevRef = useRef(1.32); // elevation (view tilt), long axis roughly vertical
@@ -38,9 +45,9 @@ export default function ActivationMap() {
   const faces = geometry?.faces;
   const lat = results.activation_map?.values;
   const chamber = geometry?.chamber;
-  // HARD GATE: the Strocchi endocardial surface is unrepaired (F5 pending), so a
-  // Strocchi Purkinje tree would render wrong (4 PMJ/side vs crtdemo's 87/166).
-  // If the geometry is Strocchi, ship the surface + activation map with NO tree.
+  // The Strocchi demo ships the myocardial surface + activation map only (no Purkinje tree):
+  // the network is grown (F5, LV 44 / RV 138 PMJs) but sparser than crtdemo's 87 / 166, so this
+  // is a method-generality figure, not an anatomically faithful tree render. Suppress the tree.
   const isStrocchi = (geometry?.geometry_id ?? "").toLowerCase().includes("strocchi");
   const purk = isStrocchi ? undefined : geometry?.purkinje;
 

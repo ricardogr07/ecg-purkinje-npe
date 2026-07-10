@@ -2,11 +2,10 @@
 
 Sibling to test_forward_determinism.py (kept separate, not merged into it, to avoid touching
 a Science-owned file and to gate independently: this needs data/01/01.case, which is
-worktree-local and gitignored, not just the sim stack). See src/adapter/strocchi.py's
-load_geometry docstring for the known caveat this test does NOT re-validate: sim.forward's
-Purkinje-tree growth still hardcodes crtdemo's own endocardial OBJ paths, so this exercises
-determinism of the full MyocardialMesh/FIM/lead-field path on the Strocchi volumetric mesh,
-not yet a geometrically-native Strocchi Purkinje network.
+worktree-local and gitignored, not just the sim stack). load_geometry attaches the F5 UVC-grown
+Strocchi Purkinje trees to geom.tree_config, so this exercises determinism of the full,
+geometrically-native Strocchi path: its own Purkinje network, myocardium, FIM eikonal, and
+lead-field pseudo-ECG.
 
 Slow: builds the ~1.7M-tet Strocchi MyocardialMesh (FIM solver init alone is minutes on this
 mesh, far slower than crtdemo's ~18k-cell mesh) and runs the forward model twice, so it is

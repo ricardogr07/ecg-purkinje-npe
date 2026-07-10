@@ -418,6 +418,135 @@ def ingest(case_path: str | Path, out_dir: str | Path, **kwargs: Any) -> dict[st
     return paths
 
 
+# ---------------------------------------------------------------------------------------
+# F5 Purkinje-tree growth on the Strocchi endocardium (the UVC-as-UV hook).
+#
+# The UVC-thresholded endo is ragged (hundreds of open edges), so purkinje-uv's harmonic disk
+# map (Mesh.uvmap) fails. Instead feed the mesh's own analytic UVC (rotational, longitudinal)
+# straight in as the UV via FractalTree(uv=...), which bypasses the harmonic solve. Seeds are
+# anatomical (His origin at the basal septum). Constants mirror experiments/f5_uvc_tree.py
+# (verified: LV 44 / RV 138 PMJs). ponytail: f5_uvc_tree.py duplicates _prep_endo_patch /
+# _pick_his_seeds; fold that driver onto these once the Strocchi forward is settled.
+# ---------------------------------------------------------------------------------------
+_F5_SEAM_RAD = 3.0  # rotational span (rad) above which a triangle straddles the +/-pi seam
+_F5_FAS: dict[str, tuple[list[float], list[float]]] = {
+    "lv": (
+        [0.5 * 4.711579058738858, 0.5 * 9.129484609771032],
+        [0.1 * 0.14448952070696136, 0.1 * 0.23561944901923448],
+    ),
+    "rv": (
+        [0.5 * 21.703867933650002, 0.5 * 5.79561866201451],
+        [0.1 * 0.23561944901923448, 0.1 * 0.23561944901923448],
+    ),
+}
+_F5_INIT_LEN = 15.0
+_F5_LENGTH = 8.0
+_F5_L_SEGMENT = 1.0
+_F5_W = 0.1
+_F5_BRANCH_ANGLE = 0.175
+
+
+def _prep_endo_patch(patch: Any) -> tuple[Any, np.ndarray, np.ndarray]:
+    """Triangulate, drop the triangles that break the UVC parametrization (the +/-pi rotational
+    seam, the apex singularity where longitudinal -> 0, and near-zero-area slivers in 3D or UV),
+    then keep the largest connected component. Returns (poly, rot, lon) aligned to poly.points."""
+    import pyvista as pv
+
+    tri = patch.triangulate().clean()
+    pts = np.asarray(tri.points, float)
+    rot = np.asarray(tri.point_data["uvc_rotational"], float)
+    lon = np.asarray(tri.point_data["uvc_longitudinal"], float)
+    faces = np.asarray(tri.faces, int).reshape(-1, 4)[:, 1:]
+
+    v0, v1, v2 = pts[faces[:, 0]], pts[faces[:, 1]], pts[faces[:, 2]]
+    area3d = 0.5 * np.linalg.norm(np.cross(v1 - v0, v2 - v0), axis=1)
+    uvv = np.column_stack([rot, lon])
+    u0, u1, u2 = uvv[faces[:, 0]], uvv[faces[:, 1]], uvv[faces[:, 2]]
+    uvarea = 0.5 * np.abs(np.cross(u1 - u0, u2 - u0))
+    span = rot[faces].max(1) - rot[faces].min(1)
+    apex = lon[faces].max(1) < 0.05  # triangle wholly in the singular apex cap
+
+    keep = (
+        (span <= _F5_SEAM_RAD) & (area3d > 1e-6 * float(area3d.max())) & (uvarea > 1e-9) & (~apex)
+    )
+    kf = faces[keep]
+    poly = pv.PolyData(pts, np.hstack([np.full((kf.shape[0], 1), 3), kf]).ravel())
+    poly.point_data["uvc_rotational"] = rot
+    poly.point_data["uvc_longitudinal"] = lon
+    poly = poly.clean().connectivity("largest").triangulate().clean()
+    rot = np.asarray(poly.point_data["uvc_rotational"], float)
+    lon = np.asarray(poly.point_data["uvc_longitudinal"], float)
+    return poly, rot, lon
+
+
+def _pick_his_seeds(rot: np.ndarray, lon: np.ndarray) -> tuple[int, int]:
+    """His-origin seeds from UVC: init = most basal septal vertex; second = a septal vertex just
+    apical of it (sets a downward-the-septum initial direction)."""
+    septal = np.abs(rot) < 1.0
+    for thr in (0.3, 0.6, 1.0):
+        septal = np.abs(rot) < thr
+        if septal.sum() >= 5:
+            break
+    init = int(np.argmax(np.where(septal, lon, -np.inf)))
+    cand = np.flatnonzero(septal & (lon < lon[init]))
+    if cand.size == 0:
+        cand = np.flatnonzero(septal & (np.arange(rot.size) != init))
+    d = (rot[cand] - rot[init]) ** 2 + (lon[cand] - lon[init]) ** 2
+    second = int(cand[int(np.argmin(np.where(d > 0, d, np.inf)))])
+    return init, second
+
+
+def grow_purkinje_trees(mesh: Any, out_dir: str | Path, n_it: int | None = None) -> tuple[Any, Any]:
+    """Grow LV and RV Purkinje trees on the Strocchi endocardium and return them as purkinje-uv
+    ``PurkinjeTree`` objects (nodes + connectivity + PMJ end nodes), ready for ``run_ecg_core``.
+
+    Fascicles are mandatory: without them the trunk's branching edge is never re-queued and the
+    tree stops at the trunk (0 PMJs). N_it defaults to the F5_NIT env (else 15); the LV saturates
+    near 44 PMJs by collision regardless."""
+    import os
+
+    import meshio
+    from purkinje_uv import FractalTree, FractalTreeParameters, PurkinjeTree
+
+    if n_it is None:
+        n_it = int(os.environ.get("F5_NIT", "15"))
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    endo = extract_endocardium(mesh)
+
+    trees = []
+    for label, patch in (("lv", endo.lv_endo), ("rv", endo.rv_endo)):
+        poly, rot, lon = _prep_endo_patch(patch)
+        obj = out / f"strocchi_f5_{label}_endo_cut.obj"
+        faces = np.asarray(poly.faces, int).reshape(-1, 4)[:, 1:]
+        meshio.write_points_cells(str(obj), np.asarray(poly.points, float), [("triangle", faces)])
+        init, second = _pick_his_seeds(rot, lon)
+        fas_len, fas_ang = _F5_FAS[label]
+        params = FractalTreeParameters(
+            meshfile=str(obj),
+            init_node_id=init,
+            second_node_id=second,
+            init_length=_F5_INIT_LEN,
+            length=_F5_LENGTH,
+            l_segment=_F5_L_SEGMENT,
+            w=_F5_W,
+            branch_angle=_F5_BRANCH_ANGLE,
+            N_it=n_it,
+            fascicles_length=fas_len,
+            fascicles_angles=fas_ang,
+        )
+        ft = FractalTree(params=params, uv=np.column_stack([rot, lon]).astype(float))
+        ft.grow_tree()
+        trees.append(
+            PurkinjeTree(
+                nodes=np.asarray(ft.nodes_xyz, dtype=float),
+                connectivity=np.asarray(ft.connectivity, dtype=int),
+                end_nodes=np.asarray(ft.end_nodes, dtype=int),
+            )
+        )
+    return trees[0], trees[1]
+
+
 # data/ is gitignored (see .gitignore); these are worktree-local defaults, not shipped in git.
 DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "01"
 DEFAULT_CASE_PATH = DATA_DIR / "01.case"
@@ -434,14 +563,16 @@ def load_geometry(
     forward-input files under `cache_dir` (`ingest` is a pure function of `case_path`, so
     reusing an existing cache is safe) so repeated calls don't re-run the ingest step.
 
-    NOTE: `_build_tree` in `sim.forward.forward` grows LV/RV Purkinje trees on crtdemo's
-    OWN endocardial OBJ paths (module-level constants, not parametrized by `geom`), not on
-    this adapter's `lv_endo`/`rv_endo` outputs. Calling `forward(theta, load_geometry())`
-    therefore couples a crtdemo-topology Purkinje tree to this Strocchi myocardium; see the
-    C.7 smoke-test caveat in the adapter's test/report. Full cross-geometry support needs
-    `sim.forward` to accept endo-surface paths as an argument, not forked here.
+    Grows the Strocchi LV/RV Purkinje trees (F5 UVC hook, `grow_purkinje_trees`) and attaches
+    them to `geom.tree_config` so `forward(theta, load_geometry())` runs the literal chain on
+    THIS heart's own trees, myocardium, and electrodes. Because the trees are pre-grown, the
+    tree-growth theta keys (`init_length_*`, `branch_angle`, `w`) are inert for this geometry:
+    the Strocchi forward is a single fixed-theta, method-generality run, not an identifiability
+    sweep. No identifiability result is claimed on this geometry.
     """
     from myocardial_mesh import MyocardialMesh
+
+    from sim.forward import TreeConfig
 
     cache_dir = Path(cache_dir)
     myo_path = cache_dir / "strocchi_myo.vtk"
@@ -449,8 +580,24 @@ def load_geometry(
     electrodes_path = cache_dir / "strocchi_electrode_pos.pkl"
     if not (myo_path.exists() and fibers_path.exists() and electrodes_path.exists()):
         ingest(case_path, cache_dir)
-    return MyocardialMesh(
+    geom = MyocardialMesh(
         myo_mesh=str(myo_path),
         electrodes_position=str(electrodes_path),
         fibers=str(fibers_path),
     )
+    lv_tree, rv_tree = grow_purkinje_trees(read_mesh(case_path), cache_dir)
+    # Pre-grown trees carry the Purkinje network; endo/seed fields below are inert placeholders
+    # (forward short-circuits growth when lv_tree/rv_tree are set), kept for provenance.
+    geom.tree_config = TreeConfig(
+        lv_endo=str(cache_dir / "strocchi_f5_lv_endo_cut.obj"),
+        rv_endo=str(cache_dir / "strocchi_f5_rv_endo_cut.obj"),
+        lv_seeds=(0, 1),
+        rv_seeds=(0, 1),
+        lv_fas_len=_F5_FAS["lv"][0],
+        rv_fas_len=_F5_FAS["rv"][0],
+        lv_fas_ang=_F5_FAS["lv"][1],
+        rv_fas_ang=_F5_FAS["rv"][1],
+        lv_tree=lv_tree,
+        rv_tree=rv_tree,
+    )
+    return geom
