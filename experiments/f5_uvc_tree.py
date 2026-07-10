@@ -19,6 +19,7 @@ Run: .venv/Scripts/python.exe experiments/f5_uvc_tree.py
 """
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -140,7 +141,7 @@ def grow_one(label, patch):
         l_segment=1.0,
         w=0.1,
         branch_angle=0.175,
-        N_it=15,
+        N_it=int(os.environ.get("F5_NIT", "15")),
         fascicles_length=fas_len,
         fascicles_angles=fas_ang,
     )
