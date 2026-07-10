@@ -68,7 +68,9 @@ def _git_sha() -> str:
         return "unknown"
 
 
-def _train(theta, x):
+def _train(theta, x, **train_kwargs):
+    """Train the features NPE. train_kwargs (e.g. stop_after_epochs, max_num_epochs) pass
+    straight to sbi's NPE.train(); empty reproduces the default training used by the headline."""
     torch.manual_seed(0)
     lo = torch.tensor([_bounds(k)[0] for k in THETA_NAMES], dtype=torch.float32)
     hi = torch.tensor([_bounds(k)[1] for k in THETA_NAMES], dtype=torch.float32)
@@ -76,7 +78,7 @@ def _train(theta, x):
     inf.append_simulations(
         torch.tensor(theta, dtype=torch.float32), torch.tensor(x, dtype=torch.float32)
     )
-    inf.train()
+    inf.train(**train_kwargs)
     return inf.build_posterior()
 
 
