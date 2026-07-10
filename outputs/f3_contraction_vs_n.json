@@ -1,0 +1,322 @@
+{
+ "meta": {
+  "analysis": "F3 contraction vs training-N, features NPE, 3 seeds, disjoint calib+SBC",
+  "ckpt": "day4_wave_ckpt.npz",
+  "n_calib": 250,
+  "n_sbc": 250,
+  "n_post": 300,
+  "schedule": [
+   1000,
+   4000
+  ],
+  "seeds": [
+   0,
+   1,
+   2
+  ],
+  "prior_std": {
+   "cv": 0.6307158642755383,
+   "delta_iv": 37.314384579570216,
+   "init_length_lv": 8.601835988966176,
+   "init_length_rv": 8.66945545003554,
+   "branch_angle": 0.05724335969843597,
+   "w": 0.043527888208947534,
+   "cv_myo": 0.14424267266929702
+  },
+  "train_kwargs": {},
+  "note": "Calibration and SBC sets are fixed and disjoint (inflation fit on calib, contraction measured on SBC). crlb_floor is the WAVEFORM Cramer-Rao bound (jacobian.json) as a contraction, a best-case local floor. label: 'trend-below-seed-noise' means the seed spread swallows the N trend for that parameter (curve uninformative); else 'data-limited' (still tightening) or 'widening'."
+ },
+ "crlb_floor": {
+  "cv": 0.00858982788584995,
+  "delta_iv": 0.008107499985077477,
+  "init_length_lv": 0.015445149173227382,
+  "init_length_rv": 0.0023380123324000315,
+  "branch_angle": 0.0063103204341982575,
+  "w": 0.008201778775213341,
+  "cv_myo": 0.006920642632935355
+ },
+ "curve": [
+  {
+   "n_train": 1000,
+   "per_seed": [
+    {
+     "seed": 0,
+     "raw": {
+      "cv": 0.548170422593802,
+      "delta_iv": 0.1519719335527756,
+      "init_length_lv": 0.8058934450060984,
+      "init_length_rv": 0.6369047015181726,
+      "branch_angle": 0.7974695745148587,
+      "w": 0.8091279760707144,
+      "cv_myo": 0.29255089310583243
+     },
+     "post_conformal": {
+      "cv": 0.7674385916313228,
+      "delta_iv": 0.1899649169409695,
+      "init_length_lv": 1.1685454952588425,
+      "init_length_rv": 0.7324404067458984,
+      "branch_angle": 1.0765839255950593,
+      "w": 1.011409970088393,
+      "cv_myo": 0.29255089310583243
+     }
+    },
+    {
+     "seed": 1,
+     "raw": {
+      "cv": 0.6688775184440124,
+      "delta_iv": 0.14952636967226918,
+      "init_length_lv": 0.8051521769224391,
+      "init_length_rv": 0.4776965392849235,
+      "branch_angle": 0.8129700766487821,
+      "w": 0.7895388280343739,
+      "cv_myo": 0.30407531862692655
+     },
+     "post_conformal": {
+      "cv": 0.9029846498994168,
+      "delta_iv": 0.2018605990575634,
+      "init_length_lv": 1.2479858742297807,
+      "init_length_rv": 0.5732358471419082,
+      "branch_angle": 0.9755640919785384,
+      "w": 1.0264004764446861,
+      "cv_myo": 0.30407531862692655
+     }
+    },
+    {
+     "seed": 2,
+     "raw": {
+      "cv": 0.5330361661392866,
+      "delta_iv": 0.12786600239580506,
+      "init_length_lv": 0.8097606558984284,
+      "init_length_rv": 0.4648694740623607,
+      "branch_angle": 0.8100601735389201,
+      "w": 0.7953761695768167,
+      "cv_myo": 0.2859228711526621
+     },
+     "post_conformal": {
+      "cv": 0.6929470159810727,
+      "delta_iv": 0.17261910323433685,
+      "init_length_lv": 1.255129016642564,
+      "init_length_rv": 0.5810868425779508,
+      "branch_angle": 0.9720722082467042,
+      "w": 1.0737578289287026,
+      "cv_myo": 0.30021901471029516
+     }
+    }
+   ],
+   "post_conformal_agg": {
+    "cv": {
+     "median": 0.7674385916313228,
+     "min": 0.6929470159810727,
+     "max": 0.9029846498994168,
+     "spread": 0.21003763391834418
+    },
+    "delta_iv": {
+     "median": 0.1899649169409695,
+     "min": 0.17261910323433685,
+     "max": 0.2018605990575634,
+     "spread": 0.02924149582322655
+    },
+    "init_length_lv": {
+     "median": 1.2479858742297807,
+     "min": 1.1685454952588425,
+     "max": 1.255129016642564,
+     "spread": 0.08658352138372138
+    },
+    "init_length_rv": {
+     "median": 0.5810868425779508,
+     "min": 0.5732358471419082,
+     "max": 0.7324404067458984,
+     "spread": 0.15920455960399016
+    },
+    "branch_angle": {
+     "median": 0.9755640919785384,
+     "min": 0.9720722082467042,
+     "max": 1.0765839255950593,
+     "spread": 0.10451171734835518
+    },
+    "w": {
+     "median": 1.0264004764446861,
+     "min": 1.011409970088393,
+     "max": 1.0737578289287026,
+     "spread": 0.06234785884030969
+    },
+    "cv_myo": {
+     "median": 0.30021901471029516,
+     "min": 0.29255089310583243,
+     "max": 0.30407531862692655,
+     "spread": 0.011524425521094117
+    }
+   }
+  },
+  {
+   "n_train": 4000,
+   "per_seed": [
+    {
+     "seed": 0,
+     "raw": {
+      "cv": 0.44900825258138827,
+      "delta_iv": 0.11785048065261793,
+      "init_length_lv": 0.7738235667710884,
+      "init_length_rv": 0.32779055830484577,
+      "branch_angle": 0.8057083995764818,
+      "w": 0.7820489452515268,
+      "cv_myo": 0.2719884671385345
+     },
+     "post_conformal": {
+      "cv": 0.5163594904685964,
+      "delta_iv": 0.1473131008157724,
+      "init_length_lv": 1.1220441718180783,
+      "init_length_rv": 0.3769591420505726,
+      "branch_angle": 1.0474209194494264,
+      "w": 1.0948685233521374,
+      "cv_myo": 0.32638616056624137
+     }
+    },
+    {
+     "seed": 1,
+     "raw": {
+      "cv": 0.4347579314715894,
+      "delta_iv": 0.12363355076624521,
+      "init_length_lv": 0.7767757783372982,
+      "init_length_rv": 0.37553848645383836,
+      "branch_angle": 0.8122992513757925,
+      "w": 0.773011447198586,
+      "cv_myo": 0.26747006092603476
+     },
+     "post_conformal": {
+      "cv": 0.4782337246187484,
+      "delta_iv": 0.14836026091949425,
+      "init_length_lv": 1.0098085118384876,
+      "init_length_rv": 0.4130923350992222,
+      "branch_angle": 0.9747591016509509,
+      "w": 1.1208665984379498,
+      "cv_myo": 0.3477110792038452
+     }
+    },
+    {
+     "seed": 2,
+     "raw": {
+      "cv": 0.4675922525355064,
+      "delta_iv": 0.12646850081005884,
+      "init_length_lv": 0.7824748726496554,
+      "init_length_rv": 0.38484369281554764,
+      "branch_angle": 0.8143187556318474,
+      "w": 0.7644633183938009,
+      "cv_myo": 0.2748423523372955
+     },
+     "post_conformal": {
+      "cv": 0.49097186516228175,
+      "delta_iv": 0.13911535089106472,
+      "init_length_lv": 0.9389698471795864,
+      "init_length_rv": 0.42332806209710244,
+      "branch_angle": 1.0586143823214016,
+      "w": 1.1084718116710113,
+      "cv_myo": 0.30232658757102504
+     }
+    }
+   ],
+   "post_conformal_agg": {
+    "cv": {
+     "median": 0.49097186516228175,
+     "min": 0.4782337246187484,
+     "max": 0.5163594904685964,
+     "spread": 0.038125765849848
+    },
+    "delta_iv": {
+     "median": 0.1473131008157724,
+     "min": 0.13911535089106472,
+     "max": 0.14836026091949425,
+     "spread": 0.009244910028429532
+    },
+    "init_length_lv": {
+     "median": 1.0098085118384876,
+     "min": 0.9389698471795864,
+     "max": 1.1220441718180783,
+     "spread": 0.18307432463849183
+    },
+    "init_length_rv": {
+     "median": 0.4130923350992222,
+     "min": 0.3769591420505726,
+     "max": 0.42332806209710244,
+     "spread": 0.046368920046529816
+    },
+    "branch_angle": {
+     "median": 1.0474209194494264,
+     "min": 0.9747591016509509,
+     "max": 1.0586143823214016,
+     "spread": 0.08385528067045067
+    },
+    "w": {
+     "median": 1.1084718116710113,
+     "min": 1.0948685233521374,
+     "max": 1.1208665984379498,
+     "spread": 0.025998075085812422
+    },
+    "cv_myo": {
+     "median": 0.32638616056624137,
+     "min": 0.30232658757102504,
+     "max": 0.3477110792038452,
+     "spread": 0.045384491632820156
+    }
+   }
+  }
+ ],
+ "verdict": {
+  "cv": {
+   "median_at_min_N": 0.7674385916313228,
+   "median_at_max_N": 0.49097186516228175,
+   "median_trend": 0.276466726469041,
+   "max_seed_spread": 0.21003763391834418,
+   "crlb_floor": 0.00858982788584995,
+   "label": "data-limited"
+  },
+  "delta_iv": {
+   "median_at_min_N": 0.1899649169409695,
+   "median_at_max_N": 0.1473131008157724,
+   "median_trend": 0.04265181612519711,
+   "max_seed_spread": 0.02924149582322655,
+   "crlb_floor": 0.008107499985077477,
+   "label": "data-limited"
+  },
+  "init_length_lv": {
+   "median_at_min_N": 1.2479858742297807,
+   "median_at_max_N": 1.0098085118384876,
+   "median_trend": 0.23817736239129306,
+   "max_seed_spread": 0.18307432463849183,
+   "crlb_floor": 0.015445149173227382,
+   "label": "data-limited"
+  },
+  "init_length_rv": {
+   "median_at_min_N": 0.5810868425779508,
+   "median_at_max_N": 0.4130923350992222,
+   "median_trend": 0.16799450747872863,
+   "max_seed_spread": 0.15920455960399016,
+   "crlb_floor": 0.0023380123324000315,
+   "label": "data-limited"
+  },
+  "branch_angle": {
+   "median_at_min_N": 0.9755640919785384,
+   "median_at_max_N": 1.0474209194494264,
+   "median_trend": -0.07185682747088795,
+   "max_seed_spread": 0.10451171734835518,
+   "crlb_floor": 0.0063103204341982575,
+   "label": "trend-below-seed-noise"
+  },
+  "w": {
+   "median_at_min_N": 1.0264004764446861,
+   "median_at_max_N": 1.1084718116710113,
+   "median_trend": -0.08207133522632515,
+   "max_seed_spread": 0.06234785884030969,
+   "crlb_floor": 0.008201778775213341,
+   "label": "widening"
+  },
+  "cv_myo": {
+   "median_at_min_N": 0.30021901471029516,
+   "median_at_max_N": 0.32638616056624137,
+   "median_trend": -0.026167145855946206,
+   "max_seed_spread": 0.045384491632820156,
+   "crlb_floor": 0.006920642632935355,
+   "label": "trend-below-seed-noise"
+  }
+ }
+}

@@ -68,10 +68,11 @@ def _git_sha() -> str:
         return "unknown"
 
 
-def _train(theta, x, **train_kwargs):
+def _train(theta, x, *, seed=0, **train_kwargs):
     """Train the features NPE. train_kwargs (e.g. stop_after_epochs, max_num_epochs) pass
-    straight to sbi's NPE.train(); empty reproduces the default training used by the headline."""
-    torch.manual_seed(0)
+    straight to sbi's NPE.train(); empty reproduces the default training used by the headline.
+    seed sets torch's RNG for this fit (default 0 = headline; vary it for seed-spread studies)."""
+    torch.manual_seed(seed)
     lo = torch.tensor([_bounds(k)[0] for k in THETA_NAMES], dtype=torch.float32)
     hi = torch.tensor([_bounds(k)[1] for k in THETA_NAMES], dtype=torch.float32)
     inf = NPE(prior=BoxUniform(low=lo, high=hi))

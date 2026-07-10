@@ -42,21 +42,35 @@ JAC = REPO / "outputs" / "jacobian.json"
 OUT = REPO / "outputs" / "f3_contraction_vs_n.json"
 
 N_CALIB = 250
+N_SBC = 250
 N_POST = 300
-# Start at 1000 (the headline emit config) up to 4750. Default training (TRAIN_KWARGS={})
-# gives well-trained flows with low prior leakage; capping epochs undertrained the flow and
-# sent DirectPosterior.sample into a rejection-sampling spin, so we do NOT cap here.
-N_SCHEDULE = [1000, 1500, 2000, 3000, 4000, 4750]
+# Two points at 1000 and 4000, three training seeds each. 4750 is dropped: it leaves too few
+# rows for two disjoint 250-row holdouts. Default training (TRAIN_KWARGS={}) reproduces the
+# headline flow (capping epochs undertrained it and spun sampling), so we do NOT cap.
+N_SCHEDULE = [1000, 4000]
+SEEDS = (0, 1, 2)
 TRAIN_KWARGS: dict = {}  # {} reproduces the default training the headline used
 
 
-def _contraction_at(th_tr, x_tr, th_ca, x_ca, prior_std, ncol):
-    """Train on (th_tr, x_tr); return (raw, post) per-param contraction on the fixed calib set."""
-    post = _train(th_tr, x_tr, **TRAIN_KWARGS)
-    sets = draw_sample_sets(post, x_ca, N_POST)  # (M, N_POST, ncol)
-    t = fit_inflation(th_ca, sets)
-    contr_raw = np.median(sets.std(axis=1), axis=0) / prior_std
+def _contraction_at(th_tr, x_tr, th_ca, x_ca, th_sbc, x_sbc, prior_std, seed):
+    """Train on (th_tr, x_tr) at `seed`; fit conformal inflation on the calibration set, then
+    return (raw, post) per-param contraction measured on the DISJOINT SBC set (never used to fit
+    inflation), so the fit set and the reported set do not overlap."""
+    post = _train(th_tr, x_tr, seed=seed, **TRAIN_KWARGS)
+    t = fit_inflation(th_ca, draw_sample_sets(post, x_ca, N_POST))
+    sets_sbc = draw_sample_sets(post, x_sbc, N_POST)  # (M, N_POST, ncol) on the held-out SBC set
+    contr_raw = np.median(sets_sbc.std(axis=1), axis=0) / prior_std
     return contr_raw, t * contr_raw
+
+
+def _agg(vals):
+    """median + spread across seeds for one parameter."""
+    return {
+        "median": float(np.median(vals)),
+        "min": float(np.min(vals)),
+        "max": float(np.max(vals)),
+        "spread": float(np.max(vals) - np.min(vals)),
+    }
 
 
 def main() -> None:
@@ -67,13 +81,16 @@ def main() -> None:
     names = list(THETA_NAMES[:ncol])
     prior_std = theta.std(axis=0)  # fixed denominator across all N
 
-    # fixed held-out calibration split (last N_CALIB rows, never in any training set)
+    # Two fixed, disjoint holdouts carved first, never in any training set: the calibration set
+    # (last N_CALIB rows) fits the conformal inflation; the SBC set (the N_SBC rows before it)
+    # is where contraction/SBC are measured. pool is everything before both.
     th_ca, x_ca = theta[-N_CALIB:], x[-N_CALIB:]
-    pool_th, pool_x = theta[:-N_CALIB], x[:-N_CALIB]
+    th_sbc, x_sbc = theta[-(N_CALIB + N_SBC) : -N_CALIB], x[-(N_CALIB + N_SBC) : -N_CALIB]
+    pool_th, pool_x = theta[: -(N_CALIB + N_SBC)], x[: -(N_CALIB + N_SBC)]
     schedule = [n for n in N_SCHEDULE if n <= pool_th.shape[0]]
     print(
-        f"[f3] rows={theta.shape[0]} pool={pool_th.shape[0]} calib={N_CALIB} "
-        f"schedule={schedule} params={names}",
+        f"[f3] rows={theta.shape[0]} pool={pool_th.shape[0]} calib={N_CALIB} sbc={N_SBC} "
+        f"schedule={schedule} seeds={SEEDS} params={names}",
         flush=True,
     )
 
@@ -83,48 +100,68 @@ def main() -> None:
 
     rows = []
     for n in schedule:
-        t0 = time.perf_counter()
-        raw, postc = _contraction_at(pool_th[:n], pool_x[:n], th_ca, x_ca, prior_std, ncol)
-        rows.append(
-            {
-                "n_train": n,
-                "raw": {k: float(raw[i]) for i, k in enumerate(names)},
-                "post_conformal": {k: float(postc[i]) for i, k in enumerate(names)},
-            }
-        )
-        dt = time.perf_counter() - t0
-        pretty = "  ".join(f"{k}={postc[i]:.3f}" for i, k in enumerate(names))
-        print(f"[f3] N={n:5d} ({dt:.0f}s) post-conformal: {pretty}", flush=True)
+        per_seed = []
+        for seed in SEEDS:
+            t0 = time.perf_counter()
+            raw, postc = _contraction_at(
+                pool_th[:n], pool_x[:n], th_ca, x_ca, th_sbc, x_sbc, prior_std, seed
+            )
+            per_seed.append(
+                {
+                    "seed": seed,
+                    "raw": {k: float(raw[i]) for i, k in enumerate(names)},
+                    "post_conformal": {k: float(postc[i]) for i, k in enumerate(names)},
+                }
+            )
+            pretty = "  ".join(f"{k}={postc[i]:.3f}" for i, k in enumerate(names))
+            print(
+                f"[f3] N={n:5d} seed={seed} ({time.perf_counter() - t0:.0f}s) post: {pretty}",
+                flush=True,
+            )
+        agg = {k: _agg([ps["post_conformal"][k] for ps in per_seed]) for k in names}
+        rows.append({"n_train": n, "per_seed": per_seed, "post_conformal_agg": agg})
 
-    # verdict per param: is it still decreasing at the top of the schedule, or plateaued?
+    # Per-param verdict on the seed-median trend, and whether the seed spread swallows it.
     verdict = {}
     if len(rows) >= 2:
-        last, prev = rows[-1]["post_conformal"], rows[-2]["post_conformal"]
+        lo_n, hi_n = rows[0], rows[-1]
         for k in names:
-            drop = (prev[k] - last[k]) / prev[k] if prev[k] else 0.0
+            med_lo = lo_n["post_conformal_agg"][k]["median"]
+            med_hi = hi_n["post_conformal_agg"][k]["median"]
+            trend = med_lo - med_hi  # positive = tightened with N
+            max_spread = max(
+                lo_n["post_conformal_agg"][k]["spread"], hi_n["post_conformal_agg"][k]["spread"]
+            )
             verdict[k] = {
-                "post_conformal_final": last[k],
-                "rel_change_last_step": float(drop),
+                "median_at_min_N": med_lo,
+                "median_at_max_N": med_hi,
+                "median_trend": float(trend),
+                "max_seed_spread": float(max_spread),
                 "crlb_floor": crlb_floor[k],
-                "gap_to_floor": float(last[k] - crlb_floor[k]),
-                # >5% still-falling => data-limited; else plateaued (feature/information-limited)
-                "label": "data-limited" if drop > 0.05 else "plateaued",
+                # if the seed spread is >= the median trend, the curve is uninformative for k
+                "label": "trend-below-seed-noise"
+                if abs(trend) <= max_spread
+                else ("data-limited" if trend > 0 else "widening"),
             }
 
     out = {
         "meta": {
-            "analysis": "F3 contraction vs training-N, features NPE on the day4 waveform sweep",
+            "analysis": "F3 contraction vs training-N, features NPE, 3 seeds, disjoint calib+SBC",
             "ckpt": CKPT.name,
             "n_calib": N_CALIB,
+            "n_sbc": N_SBC,
             "n_post": N_POST,
             "schedule": schedule,
+            "seeds": list(SEEDS),
             "prior_std": {k: float(prior_std[i]) for i, k in enumerate(names)},
             "train_kwargs": TRAIN_KWARGS,
             "note": (
-                "crlb_floor is the WAVEFORM Cramer-Rao bound (jacobian.json) as a contraction; "
-                "a best-case local floor the lossy 15-feature NPE is not expected to reach. "
-                "label: >5% relative drop on the last schedule step => data-limited, else "
-                "plateaued (feature/information-limited at this feature set)."
+                "Calibration and SBC sets are fixed and disjoint (inflation fit on calib, "
+                "contraction measured on SBC). crlb_floor is the WAVEFORM Cramer-Rao bound "
+                "(jacobian.json) as a contraction, a best-case local floor. label: "
+                "'trend-below-seed-noise' means the seed spread swallows the N trend for that "
+                "parameter (curve uninformative); else 'data-limited' (still tightening) or "
+                "'widening'."
             ),
         },
         "crlb_floor": crlb_floor,
@@ -133,12 +170,11 @@ def main() -> None:
     }
     OUT.write_text(json.dumps(out, indent=1))
     print(f"[f3] wrote {OUT}", flush=True)
-    print("[f3] verdict:", flush=True)
+    print("[f3] verdict (seed-median trend vs seed spread):", flush=True)
     for k, v in verdict.items():
         print(
-            f"  {k:16s} final={v['post_conformal_final']:.3f} "
-            f"floor={v['crlb_floor']:.4f} last-step drop={v['rel_change_last_step']:+.1%} "
-            f"-> {v['label']}",
+            f"  {k:16s} lo={v['median_at_min_N']:.3f} hi={v['median_at_max_N']:.3f} "
+            f"trend={v['median_trend']:+.3f} spread={v['max_seed_spread']:.3f} -> {v['label']}",
             flush=True,
         )
 
