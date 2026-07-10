@@ -149,7 +149,8 @@ class MyocardialMesh:
         print(time.time() - t0)
 
     def set_fiber_cv(self, cv_long_m_per_s: float) -> None:
-        """Set the myocardial (longitudinal fiber) conduction velocity, rebuilding D + FIM.
+        """Set the myocardial (longitudinal fiber) conduction velocity by rescaling D and swapping
+        the FIM solver's metric in place (no geometry rebuild).
 
         The eikonal travel time scales as 1/sqrt(D), and the longitudinal fiber CV as sqrt(D),
         so rescaling the base tensor by (cv_target / cv_base)**2 makes the fiber-direction CV
@@ -157,12 +158,17 @@ class MyocardialMesh:
         is held at the crtdemo default (a modeling choice; cv_myo is a single knob, not the full
         conductivity tensor). Only D and the FIM solver change; the Laplacian K and lead fields
         (built from Gi) are independent of D and stay fixed, so the ECG projection is unchanged.
+
+        F6 (caching): create_fim_solver's expensive precompute (elems_perm, points_perm,
+        connectivity) is geometry-only; only metrics = inv(D) depends on cv_myo. So the solver is
+        built once in __init__ and here we just overwrite self.fim.metrics with inv(D). This is
+        bit-identical to a full rebuild (identical geometry precompute, identical inverse metric at
+        the same precision), verified by the F6 gate, but skips the 12-15 min create_fim_solver call.
         """
         scale = (float(cv_long_m_per_s) / self._cv_fiber_base) ** 2
         self.D = self._D_base * scale
-        self.fim = FIMPY.create_fim_solver(
-            self.xyz, self.cells, self.D, device=self.device
-        )
+        self.fim.check_metrics_argument(self.D)
+        self.fim.metrics = np.linalg.inv(self.D).astype(self.fim.precision)
 
     def activate_fim(
         self,
