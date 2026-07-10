@@ -10,6 +10,7 @@ test so we reproduce a valid crtdemo activation before sweeping theta.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -52,28 +53,74 @@ REFERENCE_THETA: dict[str, float] = {
 }
 
 
+@dataclass
+class TreeConfig:
+    """Purkinje-tree inputs for a geometry: endocardial surfaces, root seeds, fascicles, and the
+    fractal-growth constants. Attached to the geometry object (``geom.tree_config``) so ``forward``
+    grows trees on the SAME heart it runs the eikonal on, instead of silently reusing crtdemo's."""
+
+    lv_endo: str
+    rv_endo: str
+    lv_seeds: tuple[int, int]
+    rv_seeds: tuple[int, int]
+    lv_fas_len: list
+    rv_fas_len: list
+    lv_fas_ang: list
+    rv_fas_ang: list
+    length: float = _LENGTH
+    l_segment: float = _L_SEGMENT
+    n_it: int = _N_IT
+
+
+CRTDEMO_TREE_CONFIG = TreeConfig(
+    lv_endo=str(DATA_DIR / "crtdemo_LVendo_heart_cut.obj"),
+    rv_endo=str(DATA_DIR / "crtdemo_RVendo_heart_cut.obj"),
+    lv_seeds=_LV_SEEDS,
+    rv_seeds=_RV_SEEDS,
+    lv_fas_len=_LV_FAS_LEN,
+    rv_fas_len=_RV_FAS_LEN,
+    lv_fas_ang=_LV_FAS_ANG,
+    rv_fas_ang=_RV_FAS_ANG,
+)
+
+
 def load_geometry() -> MyocardialMesh:
-    """Build the crtdemo MyocardialMesh once (mesh + fibers + electrodes)."""
-    return MyocardialMesh(
+    """Build the crtdemo MyocardialMesh once (mesh + fibers + electrodes) and attach its Purkinje
+    ``TreeConfig`` so ``forward`` is geometry-parametrized (grows trees on this geometry, not a
+    hardcoded one)."""
+    geom = MyocardialMesh(
         myo_mesh=str(DATA_DIR / "crtdemo_mesh_oriented.vtk"),
         electrodes_position=str(DATA_DIR / "electrode_pos.pkl"),
         fibers=str(DATA_DIR / "crtdemo_f0_oriented.vtk"),
     )
+    geom.tree_config = CRTDEMO_TREE_CONFIG
+    return geom
 
 
-def _build_tree(meshfile, seeds, init_len, fas_len, fas_ang, branch_angle, w) -> PurkinjeTree:
+def _build_tree(
+    meshfile,
+    seeds,
+    init_len,
+    fas_len,
+    fas_ang,
+    branch_angle,
+    w,
+    length=_LENGTH,
+    l_segment=_L_SEGMENT,
+    n_it=_N_IT,
+) -> PurkinjeTree:
     params = FractalTreeParameters(
         meshfile=str(meshfile),
         init_node_id=seeds[0],
         second_node_id=seeds[1],
         init_length=float(init_len),
-        length=_LENGTH,
+        length=length,
         w=float(w),
-        l_segment=_L_SEGMENT,
+        l_segment=l_segment,
         fascicles_length=fas_len,
         fascicles_angles=fas_ang,
         branch_angle=float(branch_angle),
-        N_it=_N_IT,
+        N_it=n_it,
     )
     ft = FractalTree(params=params)
     ft.grow_tree()
@@ -88,8 +135,8 @@ def forward(
     theta: dict[str, float],
     geom: MyocardialMesh,
     kmax: int = 2,
-    seeds_lv: tuple[int, int] = _LV_SEEDS,
-    seeds_rv: tuple[int, int] = _RV_SEEDS,
+    seeds_lv: tuple[int, int] | None = None,
+    seeds_rv: tuple[int, int] | None = None,
 ) -> np.ndarray:
     """Map a theta dict to a 12-lead ECG as a (12, T) float array on crtdemo.
 
@@ -102,25 +149,40 @@ def forward(
     parameter (it is unidentifiable under shift-invariant ECG features).
 
     seeds_lv / seeds_rv are the (init_node_id, second_node_id) endocardial root nodes; varying
-    them (at fixed theta) yields a genuinely different Purkinje network (topology axis).
+    them (at fixed theta) yields a genuinely different Purkinje network (topology axis). They
+    default to geom.tree_config's seeds; the endocardial surfaces and fascicles come entirely from
+    geom.tree_config, so a Strocchi geom grows Strocchi trees, not crtdemo's.
     """
+    tc = getattr(geom, "tree_config", None)
+    if tc is None:
+        raise ValueError(
+            "forward(theta, geom) needs geom.tree_config (the Purkinje tree inputs for THIS "
+            "geometry). Build geom via load_geometry() (crtdemo) or the mesh adapter, which attach "
+            "it; forward no longer silently falls back to crtdemo's endocardium."
+        )
     lv = _build_tree(
-        DATA_DIR / "crtdemo_LVendo_heart_cut.obj",
-        seeds_lv,
+        tc.lv_endo,
+        seeds_lv if seeds_lv is not None else tc.lv_seeds,
         theta["init_length_lv"],
-        _LV_FAS_LEN,
-        _LV_FAS_ANG,
+        tc.lv_fas_len,
+        tc.lv_fas_ang,
         theta["branch_angle"],
         theta["w"],
+        tc.length,
+        tc.l_segment,
+        tc.n_it,
     )
     rv = _build_tree(
-        DATA_DIR / "crtdemo_RVendo_heart_cut.obj",
-        seeds_rv,
+        tc.rv_endo,
+        seeds_rv if seeds_rv is not None else tc.rv_seeds,
         theta["init_length_rv"],
-        _RV_FAS_LEN,
-        _RV_FAS_ANG,
+        tc.rv_fas_len,
+        tc.rv_fas_ang,
         theta["branch_angle"],
         theta["w"],
+        tc.length,
+        tc.l_segment,
+        tc.n_it,
     )
     # Contract A param 7: myocardial CV. Inert for 6D theta (key absent); rebuilds D + FIM when
     # present. delta_iv/cv above drive the Purkinje pass; cv_myo drives the myocardial eikonal.
