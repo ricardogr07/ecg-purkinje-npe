@@ -62,3 +62,9 @@ credentials.json
 # Research lane working notes (internal, like .claude and .localagent)
 .claude_research/
 /contract_b.json
+
+# local dev-server + junk (not canonical; repo lockfile is package-lock.json)
+ui/dev-server.log
+ui/pnpm-lock.yaml
+ui/pnpm-workspace.yaml
+*.stackdump
