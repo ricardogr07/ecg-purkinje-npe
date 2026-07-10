@@ -1,0 +1,469 @@
+{
+ "meta": {
+  "analysis": "LOCAL Jacobian/FIM/CRLB at REFERENCE_THETA (crtdemo); not a global identifiability claim. Forward is core.noise.to_physiological_mv(sim.forward.forward(...)).",
+  "theta_star": {
+   "cv": 1.5,
+   "delta_iv": -75.0,
+   "init_length_lv": 35.0,
+   "init_length_rv": 55.0,
+   "branch_angle": 0.175,
+   "w": 0.1,
+   "cv_myo": 0.67
+  },
+  "theta_names": [
+   "cv",
+   "delta_iv",
+   "init_length_lv",
+   "init_length_rv",
+   "branch_angle",
+   "w",
+   "cv_myo"
+  ],
+  "prior_bounds": {
+   "cv": [
+    1.3,
+    3.5
+   ],
+   "delta_iv": [
+    -90.0,
+    40.0
+   ],
+   "init_length_lv": [
+    30.0,
+    60.0
+   ],
+   "init_length_rv": [
+    30.0,
+    60.0
+   ],
+   "branch_angle": [
+    0.1,
+    0.3
+   ],
+   "w": [
+    0.05,
+    0.2
+   ],
+   "cv_myo": [
+    0.5,
+    1.0
+   ]
+  },
+  "sigma_waveform_mv": 0.025,
+  "sigma_source": "Contract D, Obregon-Rosas et al. 2026 (QRSense), PMID 42176693",
+  "eps_requested_main": 0.01,
+  "eps_primary_used": 0.01,
+  "eps_sweep": [
+   0.005,
+   0.01,
+   0.015
+  ],
+  "waveform_T_at_primary_eps": 206,
+  "baseline_forward_ok": true
+ },
+ "forward_failures": {
+  "all": [],
+  "failed_at_every_step_size": [],
+  "note": "Each entry is a perturbation whose fractal-tree growth projected outside the crtdemo mesh (known fragility, sim.forward REFERENCE_THETA note). A param in failed_at_every_step_size has no recoverable Jacobian column at theta*."
+ },
+ "step_size_sweep": {
+  "smallest_singular_value_by_eps": {
+   "0.005": 363.07251095035343,
+   "0.01": 214.87995779634494,
+   "0.015": 147.1671650764579
+  },
+  "relative_spread": 1.4670755243652753,
+  "stable": false,
+  "note": "if the smallest singular value moves a lot with the finite-difference step size, that direction is finite-difference noise, not a real degeneracy.",
+  "complete_passes": [
+   0.005,
+   0.01,
+   0.015
+  ]
+ },
+ "waveform": {
+  "singular_values": [
+   3939.9496099600615,
+   800.833166012595,
+   642.835458607768,
+   470.981514583197,
+   441.7912275646795,
+   330.9773391718943,
+   214.87995779634494
+  ],
+  "condition_number": 18.33558443684262,
+  "V": [
+   [
+    0.1565401582635416,
+    -0.3615461074486621,
+    -0.28071957210561693,
+    0.2561100518389679,
+    0.5135184247137207,
+    -0.6586849737263425,
+    0.05307247017137978
+   ],
+   [
+    0.05267216668802723,
+    0.581964347397968,
+    0.018298708632827797,
+    0.4521022352185623,
+    0.5349629724786479,
+    0.3005365509012674,
+    0.27803644911409753
+   ],
+   [
+    0.016874411067083143,
+    0.2660951539309705,
+    0.01456294940017544,
+    0.08999917579656597,
+    0.15941611672941977,
+    -0.06503069786398268,
+    -0.9439037038959718
+   ],
+   [
+    -0.9675072876150511,
+    0.08042365732735321,
+    -0.07989417102251997,
+    -0.07458270023420979,
+    0.14369136072280184,
+    -0.15443020959371148,
+    0.0319394620294293
+   ],
+   [
+    -0.033974686862379234,
+    -0.0028869204913821943,
+    -0.8770209371620504,
+    0.28092292977737043,
+    -0.30400508198836496,
+    0.23501528076359332,
+    -0.05570186334616007
+   ],
+   [
+    -0.018690626166816784,
+    0.36246997229322436,
+    0.19905334428791366,
+    0.48044868033565846,
+    -0.5569704596914253,
+    -0.5281463372570667,
+    0.09305033500116862
+   ],
+   [
+    0.18671396711605504,
+    0.5673927209779388,
+    -0.32477463408923907,
+    -0.6376520622786035,
+    0.037650462059041184,
+    -0.3369917950176488,
+    0.12705767189195596
+   ]
+  ],
+  "v_min": [
+   0.05307247017137978,
+   0.27803644911409753,
+   -0.9439037038959718,
+   0.0319394620294293,
+   -0.05570186334616007,
+   0.09305033500116862,
+   0.12705767189195596
+  ],
+  "v_min_named": {
+   "cv": 0.05307247017137978,
+   "delta_iv": 0.27803644911409753,
+   "init_length_lv": -0.9439037038959718,
+   "init_length_rv": 0.0319394620294293,
+   "branch_angle": -0.05570186334616007,
+   "w": 0.09305033500116862,
+   "cv_myo": 0.12705767189195596
+  },
+  "sub_noise_direction": [
+   false,
+   false,
+   false,
+   false,
+   false,
+   false,
+   false
+  ],
+  "params_used": [
+   "cv",
+   "delta_iv",
+   "init_length_lv",
+   "init_length_rv",
+   "branch_angle",
+   "w",
+   "cv_myo"
+  ],
+  "params_dropped": []
+ },
+ "fim": {
+  "eigenvalues_ascending": [
+   10.378326288601784,
+   77.95250709062232,
+   2386.1788387170764,
+   83229.28283859529,
+   3598628.053492273,
+   9337808.425657244,
+   11193792.47640707
+  ],
+  "eigenvectors": [
+   [
+    -0.0003518199810945823,
+    -0.9706419053298265,
+    0.24049467834576638,
+    -0.0040272293558417625,
+    1.0745192589363819e-05,
+    0.00019671293976699264,
+    0.0004691908215298762
+   ],
+   [
+    -0.001270299544076074,
+    0.24051462823025876,
+    0.9703018431846371,
+    -0.025493710394579237,
+    0.000387616287649301,
+    -0.0009794950634743472,
+    -0.0037939599597555697
+   ],
+   [
+    -0.20686396658263853,
+    -0.0022105632191366797,
+    -0.02553194508470881,
+    -0.9775188885229164,
+    0.007231611344796359,
+    -0.0023347317440824402,
+    -0.030815709080027714
+   ],
+   [
+    -0.9733573023656117,
+    0.0006052237811940975,
+    0.004253832540464223,
+    0.20281311937314428,
+    -0.0031293866177933387,
+    -0.039529739728612796,
+    0.09925495338244432
+   ],
+   [
+    0.09020017513018479,
+    0.001243797305641614,
+    0.0023650917868438042,
+    -0.050052863201123246,
+    0.05778425444715959,
+    0.010977269668200248,
+    0.9929209324460704
+   ],
+   [
+    -0.01672212736338852,
+    -2.266093800917801e-05,
+    -5.662282362891908e-05,
+    0.011870246435855667,
+    0.9654642682691953,
+    0.25342446201233604,
+    -0.05687049090272813
+   ],
+   [
+    -0.03695162629617739,
+    0.0004525418408587445,
+    0.0010347093636228304,
+    0.0033647407048076447,
+    -0.2539241757066888,
+    0.9664815012210533,
+    0.00761585226024626
+   ]
+  ],
+  "condition_number": 1078573.9593387893,
+  "crlb": {
+   "cv": 0.0054177407190019716,
+   "delta_iv": 0.3025263724220408,
+   "init_length_lv": 0.13285664001321848,
+   "init_length_rv": 0.02026929375737576,
+   "branch_angle": 0.0003612239424272015,
+   "w": 0.00035700610964200494,
+   "cv_myo": 0.0009982519899636763
+  },
+  "params_used": [
+   "cv",
+   "delta_iv",
+   "init_length_lv",
+   "init_length_rv",
+   "branch_angle",
+   "w",
+   "cv_myo"
+  ],
+  "params_dropped": [],
+  "fim_matrix_singular": false
+ },
+ "features": {
+  "feature_names": [
+   "p2p_lead0",
+   "p2p_lead1",
+   "p2p_lead2",
+   "p2p_lead3",
+   "p2p_lead4",
+   "p2p_lead5",
+   "p2p_lead6",
+   "p2p_lead7",
+   "p2p_lead8",
+   "p2p_lead9",
+   "p2p_lead10",
+   "p2p_lead11",
+   "qrs_active_frac",
+   "vecmag_peak",
+   "time_to_peak_frac"
+  ],
+  "params_used": [
+   "cv",
+   "delta_iv",
+   "init_length_lv",
+   "init_length_rv",
+   "branch_angle",
+   "w",
+   "cv_myo"
+  ],
+  "params_dropped": [],
+  "note": "raw: J*R only, no noise sigma (2 of 15 features are dimensionless time fractions with no sourced jitter sigma), relative units not comparable across runs. amp_subset_snr: the 13 amplitude-kind features (mV) normalized with the waveform sigma as an approximation, comparable to the waveform SVD in kind.",
+  "raw_singular_values": [
+   8.759058372479451,
+   1.9401397125391913,
+   0.9145245491607066,
+   0.6988919734415311,
+   0.4403738416153789,
+   0.40189814789493356,
+   0.10976903703893705
+  ],
+  "amp_subset_singular_values": [
+   349.0185904694395,
+   76.59289659034476,
+   29.77003913719627,
+   17.573720519511586,
+   16.087275967996245,
+   9.131754868418815,
+   2.030596155525353
+  ]
+ },
+ "crlb_comparison": {
+  "note": "CRLB to CRLB, each under its own stated noise floor. Waveform: iid Gaussian 0.025 mV/sample/lead. Waveform-8 keeps I,II,V1..V6 (drops III,aVR,aVL,aVF, exact linear combinations of I and II, so a 12-lead diagonal Sigma_n over-counts Fisher information ~12/8). Features: amp 0.05 mV, time 5 ms (as a fraction of the window via fs=500 Hz). ratio = CRLB_features / CRLB_waveform_8lead per parameter (>1 = the feature compression is less informative for that parameter).",
+  "sigma_waveform_mv": 0.025,
+  "sigma_feature_amp_mv": 0.05,
+  "sigma_feature_time_ms": 5.0,
+  "sigma_feature_time_frac": 0.012135922330097087,
+  "feature_fs_hz": 500.0,
+  "keep_lead_idx": [
+   0,
+   1,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11
+  ],
+  "T": 206,
+  "crlb_waveform_12lead": {
+   "cv": 0.0054177407190019716,
+   "delta_iv": 0.3025263724220408,
+   "init_length_lv": 0.13285664001321848,
+   "init_length_rv": 0.02026929375737576,
+   "branch_angle": 0.0003612239424272015,
+   "w": 0.00035700610964200494,
+   "cv_myo": 0.0009982519899636763
+  },
+  "crlb_waveform_8lead": {
+   "cv": 0.0055479578617906485,
+   "delta_iv": 0.33516400039425,
+   "init_length_lv": 0.1457181282615576,
+   "init_length_rv": 0.020725096448849473,
+   "branch_angle": 0.000365818815196421,
+   "w": 0.0003632511575902449,
+   "cv_myo": 0.0010072200654458476
+  },
+  "crlb_features": {
+   "cv": 0.38759234318867763,
+   "delta_iv": 10.727992298092808,
+   "init_length_lv": 3.0956321542475007,
+   "init_length_rv": 0.9898191990227997,
+   "branch_angle": 0.012204839744817095,
+   "w": 0.015485499589681755,
+   "cv_myo": 0.06429484286475208
+  },
+  "ratio_features_over_waveform8": {
+   "cv": 69.86216421326226,
+   "delta_iv": 32.008187888536895,
+   "init_length_lv": 21.243974179320897,
+   "init_length_rv": 47.75944958643356,
+   "branch_angle": 33.36307275027362,
+   "w": 42.630282839042536,
+   "cv_myo": 63.83395751383474
+  },
+  "params_dropped": []
+ },
+ "iso_ecg_check": {
+  "delta_used": 0.08828584207199758,
+  "max_feasible_delta": 0.17657168414399516,
+  "delta_theta": {
+   "cv": 0.010308204983826723,
+   "delta_iv": 3.191068664777007,
+   "init_length_lv": -2.5,
+   "init_length_rv": 0.08459406901784275,
+   "branch_angle": -0.0009835371820990156,
+   "w": 0.0012322540770989463,
+   "cv_myo": 0.005608696777344455
+  },
+  "theta_plus": {
+   "cv": 1.5103082049838268,
+   "delta_iv": -71.808931335223,
+   "init_length_lv": 32.5,
+   "init_length_rv": 55.08459406901784,
+   "branch_angle": 0.17401646281790098,
+   "w": 0.10123225407709895,
+   "cv_myo": 0.6756086967773445
+  },
+  "theta_minus": {
+   "cv": 1.4896917950161732,
+   "delta_iv": -78.191068664777,
+   "init_length_lv": 37.5,
+   "init_length_rv": 54.91540593098216,
+   "branch_angle": 0.175983537182099,
+   "w": 0.09876774592290107,
+   "cv_myo": 0.6643913032226556
+  },
+  "plus": {
+   "nrmse_per_lead": [
+    0.020519774778047718,
+    0.0256107376521907,
+    0.10683065669258157,
+    0.01967139784627337,
+    0.03999383495035141,
+    0.041703475644937,
+    0.016892217764459403,
+    0.01845392364418591,
+    0.03863597355867301,
+    0.057916671031778395,
+    0.045583968221776676,
+    0.020473150534098674
+   ],
+   "max_abs_dev_mv": 0.08200682818815092,
+   "max_abs_dev_noise_sd": 3.2802731275260366,
+   "rms_dev_noise_sd": 0.394994697497192
+  },
+  "minus": {
+   "nrmse_per_lead": [
+    0.08898303096127982,
+    0.14880553029088983,
+    0.731860568656902,
+    0.08887641912524209,
+    0.24667125030585096,
+    0.27548338971859143,
+    0.08356087653765756,
+    0.08948307299973561,
+    0.09073816137345697,
+    0.10822786390535287,
+    0.12399349096313589,
+    0.08051277511104873
+   ],
+   "max_abs_dev_mv": 0.13248765026855,
+   "max_abs_dev_noise_sd": 5.299506010741999,
+   "rms_dev_noise_sd": 1.0113561068364432
+  },
+  "verdict": "super-noise (a full step along v_min moves the ECG by > 1 noise SD; the direction is observable at this sigma)"
+ }
+}

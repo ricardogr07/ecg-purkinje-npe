@@ -1,0 +1,56 @@
+{
+ "note": "CRLB to CRLB, each under its own stated noise floor. Waveform: iid Gaussian 0.025 mV/sample/lead. Waveform-8 keeps I,II,V1..V6 (drops III,aVR,aVL,aVF, exact linear combinations of I and II, so a 12-lead diagonal Sigma_n over-counts Fisher information ~12/8). Features: amp 0.05 mV, time 5 ms (as a fraction of the window via fs=500 Hz). ratio = CRLB_features / CRLB_waveform_8lead per parameter (>1 = the feature compression is less informative for that parameter).",
+ "sigma_waveform_mv": 0.025,
+ "sigma_feature_amp_mv": 0.05,
+ "sigma_feature_time_ms": 5.0,
+ "sigma_feature_time_frac": 0.012135922330097087,
+ "feature_fs_hz": 500.0,
+ "keep_lead_idx": [
+  0,
+  1,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11
+ ],
+ "T": 206,
+ "crlb_waveform_12lead": {
+  "cv": 0.0054177407190019716,
+  "delta_iv": 0.3025263724220408,
+  "init_length_lv": 0.13285664001321848,
+  "init_length_rv": 0.02026929375737576,
+  "branch_angle": 0.0003612239424272015,
+  "w": 0.00035700610964200494,
+  "cv_myo": 0.0009982519899636763
+ },
+ "crlb_waveform_8lead": {
+  "cv": 0.0055479578617906485,
+  "delta_iv": 0.33516400039425,
+  "init_length_lv": 0.1457181282615576,
+  "init_length_rv": 0.020725096448849473,
+  "branch_angle": 0.000365818815196421,
+  "w": 0.0003632511575902449,
+  "cv_myo": 0.0010072200654458476
+ },
+ "crlb_features": {
+  "cv": 0.38759234318867763,
+  "delta_iv": 10.727992298092808,
+  "init_length_lv": 3.0956321542475007,
+  "init_length_rv": 0.9898191990227997,
+  "branch_angle": 0.012204839744817095,
+  "w": 0.015485499589681755,
+  "cv_myo": 0.06429484286475208
+ },
+ "ratio_features_over_waveform8": {
+  "cv": 69.86216421326226,
+  "delta_iv": 32.008187888536895,
+  "init_length_lv": 21.243974179320897,
+  "init_length_rv": 47.75944958643356,
+  "branch_angle": 33.36307275027362,
+  "w": 42.630282839042536,
+  "cv_myo": 63.83395751383474
+ },
+ "params_dropped": []
+}

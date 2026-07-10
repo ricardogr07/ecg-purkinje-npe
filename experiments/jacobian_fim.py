@@ -56,6 +56,18 @@ ISO_DELTA_FRACTION = 0.5  # fraction of the max in-bounds step used for the iso-
 
 PRIOR_RANGE = np.array([PRIOR_BOUNDS[k][1] - PRIOR_BOUNDS[k][0] for k in THETA_NAMES])
 
+# --- Task 3: features-vs-waveform CRLB comparison (CRLB to CRLB, each under its own floor) ---
+# 12-lead order (src/npe/emit.py LEADS): I,II,III,aVR,aVL,aVF,V1,V2,V3,V4,V5,V6. III,aVR,aVL,aVF
+# are exact linear combinations of I and II, so a 12-lead diagonal Sigma_n over-counts Fisher
+# information ~12/8. Keep only the 8 independent leads for the waveform CRLB.
+KEEP_LEAD_IDX = (0, 1, 6, 7, 8, 9, 10, 11)  # I, II, V1..V6
+# Contract D feature-level noise floors (core.features.FEATURE_KINDS = 13 amp, 2 time).
+FEATURE_SIGMA_AMP_MV = 0.05
+FEATURE_SIGMA_TIME_MS = 5.0
+FEATURE_FS_HZ = 500.0  # forward ECG sample rate (matches the demo input_ecg fs_hz)
+RAW_NPZ = _REPO / "outputs" / "jacobian_raw.npz"
+CRLB_JSON = _REPO / "outputs" / "crlb_comparison.json"
+
 
 def _log(msg: str) -> None:
     print(f"[jacobian] {msg}", flush=True)
@@ -214,6 +226,84 @@ def features_report(J_feat: np.ndarray) -> dict:
     }
 
 
+def _crlb_from_jacobian(J: np.ndarray, sigma) -> dict:
+    """Per-parameter CRLB = sqrt(diag(inv(J^T Sigma^-1 J))) over the valid (non-NaN) columns.
+
+    sigma is either a scalar (iid noise SD, same for every row) or a per-row SD vector aligned
+    to J's rows (diagonal Sigma_n). Dropped (NaN) columns get CRLB None."""
+    valid, used, dropped = _valid_cols(J)
+    Jv = J[:, valid]
+    if np.isscalar(sigma):
+        fim = (Jv.T @ Jv) / (float(sigma) ** 2)
+    else:
+        w = 1.0 / (np.asarray(sigma, float) ** 2)  # (m,) inverse per-row variance
+        fim = Jv.T @ (Jv * w[:, np.newaxis])
+    try:
+        cov = np.linalg.inv(fim)
+        singular = False
+    except np.linalg.LinAlgError:
+        cov = np.linalg.pinv(fim)
+        singular = True
+    crlb_vals = np.sqrt(np.clip(np.diag(cov), 0, None))
+    crlb = dict.fromkeys(THETA_NAMES, None)
+    for n, val in zip(used, crlb_vals.tolist(), strict=True):
+        crlb[n] = val
+    return {"crlb": crlb, "params_used": used, "params_dropped": dropped, "singular": singular}
+
+
+def crlb_comparison(J_wave: np.ndarray, J_feat: np.ndarray, T: int, sigma_mv: float) -> dict:
+    """CRLB under each observation model's own stated noise floor (the Fisher sufficiency /
+    features-vs-waveform comparison, CRLB to CRLB):
+
+      - waveform, 12 leads  (iid sigma_mv)                    -> reference, matches fim.crlb
+      - waveform, 8 leads   (iid sigma_mv, I,II,V1..V6)       -> drops the 4 derived leads
+      - features, 15-dim    (amp 0.05 mV, time 5 ms)          -> Sigma_feat diagonal by kind
+
+    The 8-lead restriction avoids inflating the waveform Fisher information by the four leads
+    that are exact linear combinations of I and II. This is NOT a strict data-processing
+    inequality (each observation uses its own sourced floor, not a pushforward of the waveform
+    noise): it is the achievable precision under each stated noise model."""
+    wave12 = _crlb_from_jacobian(J_wave, sigma_mv)
+    rows = (
+        np.concatenate([np.arange(lead * T, (lead + 1) * T) for lead in KEEP_LEAD_IDX])
+        if T > 0
+        else np.array([], dtype=int)
+    )
+    wave8 = _crlb_from_jacobian(J_wave[rows], sigma_mv)
+    ms_per_sample = 1000.0 / FEATURE_FS_HZ
+    sigma_time_frac = FEATURE_SIGMA_TIME_MS / (max(T, 1) * ms_per_sample)
+    sigma_row = np.array(
+        [FEATURE_SIGMA_AMP_MV if k == "amp" else sigma_time_frac for k in FEATURE_KINDS]
+    )
+    feat = _crlb_from_jacobian(J_feat, sigma_row)
+    ratio = {}
+    for n in THETA_NAMES:
+        cf, cw = feat["crlb"][n], wave8["crlb"][n]
+        ratio[n] = (cf / cw) if (cf is not None and cw not in (None, 0.0)) else None
+    return {
+        "note": (
+            "CRLB to CRLB, each under its own stated noise floor. Waveform: iid Gaussian "
+            f"{sigma_mv} mV/sample/lead. Waveform-8 keeps I,II,V1..V6 (drops III,aVR,aVL,aVF, "
+            "exact linear combinations of I and II, so a 12-lead diagonal Sigma_n over-counts "
+            "Fisher information ~12/8). Features: amp 0.05 mV, time 5 ms (as a fraction of the "
+            "window via fs=500 Hz). ratio = CRLB_features / CRLB_waveform_8lead per parameter "
+            "(>1 = the feature compression is less informative for that parameter)."
+        ),
+        "sigma_waveform_mv": sigma_mv,
+        "sigma_feature_amp_mv": FEATURE_SIGMA_AMP_MV,
+        "sigma_feature_time_ms": FEATURE_SIGMA_TIME_MS,
+        "sigma_feature_time_frac": sigma_time_frac,
+        "feature_fs_hz": FEATURE_FS_HZ,
+        "keep_lead_idx": list(KEEP_LEAD_IDX),
+        "T": T,
+        "crlb_waveform_12lead": wave12["crlb"],
+        "crlb_waveform_8lead": wave8["crlb"],
+        "crlb_features": feat["crlb"],
+        "ratio_features_over_waveform8": ratio,
+        "params_dropped": sorted(set(wave8["params_dropped"]) | set(feat["params_dropped"])),
+    }
+
+
 def _max_feasible_delta(theta_star: dict, direction: np.ndarray) -> float:
     max_delta = np.inf
     for i, name in enumerate(THETA_NAMES):
@@ -338,6 +428,13 @@ def main() -> dict:
     svd_main = svd_report(J_tilde_wave)
     fim_main = fim_report(main_run["J_wave"], sigma_mv)
     feat_main = features_report(main_run["J_feat"])
+    crlb_cmp = crlb_comparison(main_run["J_wave"], main_run["J_feat"], main_run["T"], sigma_mv)
+    # Self-check: the new CRLB helper must reproduce the trusted fim_report path on 12 leads.
+    for n in THETA_NAMES:
+        a, b = fim_main["crlb"][n], crlb_cmp["crlb_waveform_12lead"][n]
+        assert (a is None and b is None) or np.isclose(a, b, rtol=1e-9), (
+            f"CRLB helper disagrees with fim_report for {n}: {a} vs {b}"
+        )
 
     v_min = np.array(svd_main["v_min"])
     iso = iso_ecg_check(theta_star, v_min, geom, sigma_mv, baseline_ecg)
@@ -388,11 +485,28 @@ def main() -> dict:
         "waveform": svd_main,
         "fim": fim_main,
         "features": feat_main,
+        "crlb_comparison": crlb_cmp,
         "iso_ecg_check": iso,
     }
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     OUT_JSON.write_text(json.dumps(result, indent=1))
     _log(f"wrote {OUT_JSON}")
+    # Persist the raw Jacobians so any CRLB variant (leads, sigmas) is re-derivable offline
+    # with no forwards, and write the comparison as its own artifact for the manuscript.
+    np.savez(
+        RAW_NPZ,
+        J_wave=main_run["J_wave"],
+        J_feat=main_run["J_feat"],
+        T=main_run["T"],
+        sigma_mv=sigma_mv,
+        prior_range=PRIOR_RANGE,
+        theta_names=np.array(list(THETA_NAMES)),
+        feature_kinds=np.array(list(FEATURE_KINDS)),
+        feature_fs_hz=FEATURE_FS_HZ,
+    )
+    _log(f"wrote {RAW_NPZ} (raw J_wave/J_feat for offline CRLB re-derivation)")
+    CRLB_JSON.write_text(json.dumps(crlb_cmp, indent=1))
+    _log(f"wrote {CRLB_JSON}")
     return result
 
 
