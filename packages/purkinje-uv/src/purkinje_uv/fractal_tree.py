@@ -11,6 +11,7 @@ import numpy as np
 import pyvista as pv
 import vtk
 from numpy.typing import NDArray
+from scipy.spatial import cKDTree
 import meshio
 from collections import defaultdict
 
@@ -30,7 +31,9 @@ class FractalTree:
     so the module is self-contained.
     """
 
-    def __init__(self, params: FractalTreeParameters) -> None:
+    def __init__(
+        self, params: FractalTreeParameters, uv: NDArray[Any] | None = None
+    ) -> None:
         """Initialize the fractal tree generator.
 
         This:
@@ -41,6 +44,13 @@ class FractalTree:
 
         Args:
             params: Tree growth parameters (mesh file, growth lengths/angles, etc.).
+            uv: Optional (n_nodes, 2) external UV coordinates, one row per mesh vertex in the
+                meshfile's vertex order. When given, the harmonic disk parametrization
+                (:meth:`Mesh.uvmap`) is bypassed and this UV is used instead. This lets a
+                surface with an existing analytic parametrization (e.g. UVC rotational/apicobasal
+                on a ventricular endocardium) grow a tree without needing a clean single-boundary
+                disk, which is what the Laplace-based ``uvmap`` requires. ``None`` reproduces the
+                original behavior exactly.
 
         Raises:
             RuntimeError: If UV coordinates or UV-scaling are unavailable.
@@ -51,6 +61,16 @@ class FractalTree:
 
         # Load 3D surface mesh and compute UV+scaling (Mesh handles GPU where possible)
         self.m = Mesh(params.meshfile)
+        if uv is not None:
+            # Inject an external parametrization; compute_uvscaling then skips uvmap()
+            # (it only solves the harmonic map when self.uv is None).
+            uv_arr = np.asarray(uv, dtype=float)
+            if uv_arr.shape != (self.m.verts.shape[0], 2):
+                raise ValueError(
+                    f"external uv must be (n_nodes, 2) = ({self.m.verts.shape[0]}, 2); "
+                    f"got {uv_arr.shape}"
+                )
+            self.m.uv = uv_arr
         _LOGGER.debug("FractalTree: computing UV-scaling via Mesh...")
         self.m.compute_uvscaling()
 
@@ -802,12 +822,30 @@ class FractalTree:
             len(end_nodes),
         )
 
-        # Map UV -> XYZ by barycentric interpolation of original 3D verts (legacy)
+        # Map UV -> XYZ by barycentric interpolation of original 3D verts (legacy).
+        # Robustness: the growth-time domain checks (VTK locator, tolerance-based) can accept a
+        # node that _eval_field's strict barycentric projection then rejects (tri=-1), especially
+        # on a non-conformal external UV where triangle shapes are uneven. Rather than drop the
+        # whole tree, fall back to the nearest UV vertex's XYZ (a sub-tolerance snap) and count it.
+        uv2 = np.asarray(self.m.uv, dtype=float)
+        uv_tree = cKDTree(uv2)
         self.nodes_xyz = []
+        n_fallback = 0
         for node_uv in nodes:
             q3 = np.append(node_uv, 0.0)
-            f, _, _ = self._eval_field(q3, self.m.verts, self.mesh_uv)
-            self.nodes_xyz.append(f.astype(float))
+            try:
+                f, _, _ = self._eval_field(q3, self.m.verts, self.mesh_uv)
+            except ValueError:
+                _, nn = uv_tree.query(np.asarray(node_uv, dtype=float)[:2])
+                f = np.asarray(self.m.verts[int(nn)], dtype=float)
+                n_fallback += 1
+            self.nodes_xyz.append(np.asarray(f, dtype=float))
+        if n_fallback:
+            _LOGGER.info(
+                "Finalize: %d/%d UV nodes used nearest-vertex fallback (outside strict projection).",
+                n_fallback,
+                len(nodes),
+            )
 
         _LOGGER.debug(
             "Finalize: mapped %d UV nodes to XYZ (first=%s)",
