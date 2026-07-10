@@ -34,9 +34,12 @@ function latestDay3() {
   return hits.length ? join(OUTPUTS_DIR, hits[hits.length - 1]) : null;
 }
 
-const src = latestDay3();
+// The shipping headline artifact is the source of truth (outputs/hl_tarp_results.json);
+// fall back to the newest day3_* result if it is absent (fresh checkout / CI).
+const HL_TARP = join(OUTPUTS_DIR, "hl_tarp_results.json");
+const src = existsSync(HL_TARP) ? HL_TARP : latestDay3();
 if (!src) {
-  console.log("[gen-real] no outputs/day3_*results*.json found; leaving results.real.json as committed.");
+  console.log("[gen-real] no shipping artifact found; leaving results.real.json as committed.");
   process.exit(0);
 }
 
@@ -44,9 +47,27 @@ const day3 = JSON.parse(readFileSync(src, "utf8"));
 const existing = existsSync(RESULTS_REAL) ? JSON.parse(readFileSync(RESULTS_REAL, "utf8")) : {};
 const realActivation = day3.activation_map ?? existing.activation_map;
 
+// The real crtdemo ECG comes from experiments/export_geometry.py (merged into the committed
+// results.real.json), NOT from the day3/hl_tarp result: those carry meta.ecg_stub, a (12,2)
+// placeholder. When the source ECG is a stub, keep the existing real waveform (same pattern as
+// activation_map above); otherwise the source's ECG is real and wins.
+const realEcg = day3.meta?.ecg_stub
+  ? (existing.input_ecg ?? day3.input_ecg)
+  : (day3.input_ecg ?? existing.input_ecg);
+
+// The UI's calibration type wants tarp_atc as {before, after}; the Contract-B artifact stores
+// pre/post as two scalars (tarp_atc, tarp_atc_post). Map them so the TARP panel can render.
+const cal = day3.calibration ?? {};
+const calibration =
+  typeof cal.tarp_atc === "number"
+    ? { ...cal, tarp_atc: { before: cal.tarp_atc, after: cal.tarp_atc_post ?? null } }
+    : cal;
+
 const merged = {
   ...day3,
+  calibration,
   activation_map: realActivation,
+  input_ecg: realEcg,
   meta: {
     ...day3.meta,
     is_mock: false,

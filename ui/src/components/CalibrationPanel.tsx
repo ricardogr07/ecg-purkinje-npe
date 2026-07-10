@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { PARAM_ORDER, paramMeta, results } from "@/lib/artifact";
+import type { CoverageCurve } from "@/lib/artifact";
 import { EmptyState } from "@/components/Layout";
 import Pending from "@/components/Pending";
 
@@ -10,11 +11,10 @@ import Pending from "@/components/Pending";
 // overconfident posteriors give U-shaped ranks; conformal recalibration flattens
 // them. This checks the MARGINALS, one parameter at a time.
 //
-// TARP (expected coverage) is deliberately NOT shown as joint-calibration
-// evidence: the number on hand is pre-conformal (it describes the raw posterior
-// before the fix), so presenting it here would be dishonest. It is gated behind a
-// Pending until the post-conformal joint ATC is recomputed on the production emit
-// re-run. See docs/demo-page-brief.md section 4.
+// TARP (expected coverage) shows the JOINT: the production emit re-run has landed,
+// so the post-conformal joint coverage curve and ATC are rendered (before/after
+// conformal, keyed to the same toggle). A pre-conformal-only artifact still falls
+// back to a Pending, so a stale run never presents the raw number as calibrated.
 
 type Mode = "before" | "after";
 
@@ -55,6 +55,45 @@ function RankHist({ counts, mode }: { counts: number[]; mode: Mode }) {
   );
 }
 
+function CoverageCurvePlot({ curve, mode }: { curve: CoverageCurve; mode: Mode }) {
+  const S = 130;
+  const pad = 8;
+  const sx = (v: number) => pad + v * (S - 2 * pad);
+  const sy = (v: number) => S - pad - v * (S - 2 * pad); // SVG y grows downward
+  const nominal = curve.nominal ?? [];
+  const emp = (mode === "after" ? curve.after : curve.before) ?? [];
+  const pts = nominal.map((n, i) => `${sx(n)},${sy(emp[i] ?? n)}`).join(" ");
+  return (
+    <svg viewBox={`0 0 ${S} ${S}`} className="w-full max-w-55" aria-hidden="true">
+      {/* y = x ideal (calibrated) diagonal */}
+      <line
+        x1={sx(0)}
+        y1={sy(0)}
+        x2={sx(1)}
+        y2={sy(1)}
+        className="stroke-zinc-600"
+        strokeWidth={0.7}
+        strokeDasharray="2 2"
+      />
+      <polyline
+        points={pts}
+        fill="none"
+        className={mode === "after" ? "stroke-emerald-400" : "stroke-rose-400"}
+        strokeWidth={1.5}
+      />
+      {nominal.map((n, i) => (
+        <circle
+          key={i}
+          cx={sx(n)}
+          cy={sy(emp[i] ?? n)}
+          r={1.8}
+          className={mode === "after" ? "fill-emerald-300" : "fill-rose-300"}
+        />
+      ))}
+    </svg>
+  );
+}
+
 export default function CalibrationPanel() {
   const [mode, setMode] = useState<Mode>("before");
   const cal = results.calibration;
@@ -66,6 +105,11 @@ export default function CalibrationPanel() {
   const sbcIsHistogram = Object.values(cal.sbc ?? {}).some(
     (v) => Array.isArray(v.before) || Array.isArray(v.after),
   );
+
+  const atc = cal.tarp_atc;
+  const atcPair = typeof atc === "object" && atc !== null ? atc : undefined;
+  const atcBefore = atcPair?.before;
+  const atcAfter = atcPair?.after;
 
   return (
     <div>
@@ -135,16 +179,40 @@ export default function CalibrationPanel() {
           </p>
         </div>
 
-        {/* TARP joint coverage: gated, not shown as evidence while pre-conformal */}
+        {/* TARP joint coverage: post-conformal result landed, rendered before/after */}
         <div>
           <h3 className="mb-2 text-sm font-semibold text-zinc-200">
             Joint coverage after conformal (TARP)
           </h3>
-          <Pending
-            label="Post-conformal joint coverage (TARP)"
-            reason="The expected-coverage (TARP) number on hand is pre-conformal: it describes the raw posterior before the recalibration fix, so it is not evidence the joint is calibrated. The post-conformal joint ATC is recomputed on the production emit re-run, then it appears here."
-            falsify="If the post-conformal TARP curve does not land on the diagonal, the conformal step fixes the marginals but not the joint, and the joint intervals cannot be trusted."
-          />
+          {cal.coverage_curve ? (
+            <div>
+              <CoverageCurvePlot curve={cal.coverage_curve} mode={mode} />
+              <p className="mt-2 text-xs text-zinc-500">
+                Expected-coverage (TARP) curve: nominal credibility level (x) versus empirical
+                coverage (y). On the dashed diagonal is calibrated; below it is overconfident.
+                {atcBefore !== undefined && atcAfter !== undefined ? (
+                  <>
+                    {" "}
+                    Joint ATC{" "}
+                    <span className="font-mono text-rose-300">{atcBefore.toFixed(3)}</span> before
+                    conformal to{" "}
+                    <span className="font-mono text-emerald-300">
+                      {atcAfter >= 0 ? "+" : ""}
+                      {atcAfter.toFixed(3)}
+                    </span>{" "}
+                    after: the recalibrated joint is brought to approximate coverage (a negative
+                    ATC is overconfident; near zero is calibrated).
+                  </>
+                ) : null}
+              </p>
+            </div>
+          ) : (
+            <Pending
+              label="Post-conformal joint coverage (TARP)"
+              reason="This run carries no post-conformal joint coverage curve, so the joint TARP is not shown: a pre-conformal number alone is not evidence the joint is calibrated."
+              falsify="If the post-conformal TARP curve does not land on the diagonal, the conformal step fixes the marginals but not the joint, and the joint intervals cannot be trusted."
+            />
+          )}
         </div>
       </div>
     </div>
