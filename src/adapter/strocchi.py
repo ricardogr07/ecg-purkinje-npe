@@ -479,6 +479,40 @@ def _prep_endo_patch(patch: Any) -> tuple[Any, np.ndarray, np.ndarray]:
     return poly, rot, lon
 
 
+# Above this rot/lon 3D-scale ratio the UV is too anisotropic to grow on directly: the fractal
+# tree (defined in mm) grows across the flattened parameter space instead of along the surface,
+# producing radial chords. A full-2pi closed chamber (LV, ~3.9x) trips this; a partial-arc RV
+# (~1.9x) does not and keeps its native UV byte-identical. ponytail: single threshold; if a future
+# heart lands between these, revisit rather than hand-tune per heart.
+_UV_ISOMETRIZE_ANISOTROPY = 2.5
+
+
+def _uv_axis_scales(poly: Any, rot: np.ndarray, lon: np.ndarray) -> tuple[float, float]:
+    """Median 3D mm per unit-rot and per unit-lon, from mesh edges that move mostly along one UV
+    axis. A closed chamber unrolled over the full 2pi has rot-scale >> lon-scale; feeding that
+    anisotropic UV straight in distorts the mm-defined growth into radial spokes."""
+    faces = np.asarray(poly.faces, int).reshape(-1, 4)[:, 1:]
+    pts = np.asarray(poly.points, float)
+    e = np.vstack([faces[:, [0, 1]], faces[:, [1, 2]], faces[:, [2, 0]]])
+    d3 = np.linalg.norm(pts[e[:, 0]] - pts[e[:, 1]], axis=1)
+    dr = np.abs(rot[e[:, 0]] - rot[e[:, 1]])
+    dl = np.abs(lon[e[:, 0]] - lon[e[:, 1]])
+    rot_e = (dr > 1e-3) & (dr > 5 * dl)
+    lon_e = (dl > 1e-3) & (dl > 5 * dr)
+    rs = float(np.median(d3[rot_e] / dr[rot_e])) if rot_e.any() else 1.0
+    ls = float(np.median(d3[lon_e] / dl[lon_e])) if lon_e.any() else 1.0
+    return rs, ls
+
+
+def _growth_uv(poly: Any, rot: np.ndarray, lon: np.ndarray) -> np.ndarray:
+    """UV for FractalTree growth: isometric (rot, lon rescaled to mm) when the native UV is badly
+    anisotropic (LV full chamber), else the native UV unchanged (RV, byte-identical)."""
+    rs, ls = _uv_axis_scales(poly, rot, lon)
+    if max(rs, ls) / max(min(rs, ls), 1e-9) > _UV_ISOMETRIZE_ANISOTROPY:
+        return np.column_stack([rot * rs, lon * ls]).astype(float)
+    return np.column_stack([rot, lon]).astype(float)
+
+
 def _pick_his_seeds(rot: np.ndarray, lon: np.ndarray) -> tuple[int, int]:
     """His-origin seeds from UVC: init = most basal septal vertex; second = a septal vertex just
     apical of it (sets a downward-the-septum initial direction)."""
@@ -535,7 +569,7 @@ def grow_purkinje_trees(mesh: Any, out_dir: str | Path, n_it: int | None = None)
             fascicles_length=fas_len,
             fascicles_angles=fas_ang,
         )
-        ft = FractalTree(params=params, uv=np.column_stack([rot, lon]).astype(float))
+        ft = FractalTree(params=params, uv=_growth_uv(poly, rot, lon))
         ft.grow_tree()
         trees.append(
             PurkinjeTree(
