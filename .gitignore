@@ -48,6 +48,7 @@ credentials.json
 # Local-only orchestration and strategy
 .localagent/
 .claude/
+.claude_design/
 
 # transient FUSE temp files
 .fuse_hidden*
