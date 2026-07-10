@@ -4,10 +4,12 @@ import { useMemo } from "react";
 import { useArtifact } from "@/lib/liveArtifact";
 import { EmptyState } from "@/components/Layout";
 
-// 12-lead ECG: observed waveform (input) overlaid with the posterior-predictive
-// mean + uncertainty band. Pure SVG, one small panel per lead. Any missing block
-// degrades gracefully: no ECG -> placeholder; no predictive -> observed only;
-// no band -> mean line only.
+// 12-lead ECG: the synthetic target waveform overlaid with the posterior-predictive
+// mean + uncertainty band. This is parameter recovery against a synthetic target,
+// NOT a comparison against a real ECG (there is no real ECG in this project).
+// Amplitudes are arbitrary units scaled to a stated mV operating point. Pure SVG,
+// one small panel per lead. Any missing block degrades gracefully: no ECG ->
+// placeholder; no predictive -> target only; no band -> mean line only.
 
 const PANEL_W = 190;
 const PANEL_H = 92;
@@ -79,7 +81,7 @@ export default function EcgOverlay() {
             <figure
               key={leads[li]}
               className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-1"
-              aria-label={`Lead ${leads[li]} observed ECG with posterior-predictive band`}
+              aria-label={`Lead ${leads[li]} synthetic target ECG with posterior-predictive band`}
             >
               <svg viewBox={`0 0 ${PANEL_W} ${PANEL_H}`} className="w-full h-auto">
                 {/* baseline */}
@@ -118,7 +120,7 @@ export default function EcgOverlay() {
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-zinc-400">
         <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block h-0.5 w-4 bg-emerald-300" /> Observed input
+          <span className="inline-block h-0.5 w-4 bg-emerald-300" /> Synthetic target
         </span>
         {hasMean ? (
           <span className="inline-flex items-center gap-1.5">

@@ -16,7 +16,7 @@ export function Section({
   children: ReactNode;
 }) {
   return (
-    <section id={id} className="border-t border-zinc-800/80 py-14 sm:py-20 scroll-mt-16">
+    <section id={id} className="border-t border-zinc-800/80 py-14 sm:py-20 scroll-mt-28">
       <div className="max-w-6xl mx-auto px-4">
         <div className="max-w-3xl">
           {eyebrow ? (
