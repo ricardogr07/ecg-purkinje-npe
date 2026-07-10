@@ -36,5 +36,9 @@ not as a property of a parameter in the abstract.
 - Method and priors: `docs/research-brief.md`
 
 ## Status
-Draft. Final numbers, the shipped geometry (Strocchi gate is Saturday), and the demo
-link land as the week closes. Route the summary through the `critic` before submitting.
+Draft. The science is settled: the calibrated 7D spectrum, the FIM/CRLB reconciliation, the
+data-vs-feature retrains (F3), the pre-registered robustness ordering (F8, survives 4x noise and
+2.0 mV amplitude), and the joint calibration (post-conformal TARP ATC moves from -0.057 to +0.007,
+so the per-parameter conformal calibrates the joint, not just the marginals) are all in
+`docs/results-summary.md`. Open: shipped geometry (Strocchi is the method-generality figure only),
+the demo de-mock, and the demo link. Route the summary through the `critic` before submitting.
