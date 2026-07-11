@@ -1,5 +1,5 @@
 // Shared layout primitives (section shell, card, chip, empty state). Mirrors the
-// shelter-pulse zinc/backdrop idiom.
+// zinc/backdrop idiom.
 import type { ReactNode } from "react";
 
 export function Section({

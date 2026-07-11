@@ -2,8 +2,8 @@
 
 On tree-growth failure the draw is dropped (reject and oversample), so the effective prior
 is uniform over the growable region, a stated modeling choice to carry into calibration.
-Geometry is built once per worker. This is the day-1 smoke harness and the seed of the
-Thursday 5k sweep (scale by raising n_workers; 5k at 14.2s/theta needs ~20 cores for <1h).
+Geometry is built once per worker. This is the smoke harness and the seed of the
+5k sweep (scale by raising n_workers; 5k at 14.2s/theta needs ~20 cores for <1h).
 """
 
 from __future__ import annotations
@@ -11,8 +11,8 @@ from __future__ import annotations
 import os as _os
 
 # Pin BLAS/VTK to one thread per process BEFORE numpy imports. Each sweep worker is one
-# forward eval; multi-threaded BLAS across many workers oversubscribes cores (the day-1
-# smoke saw ~3x slowdown). Set before numpy so the thread pools size to 1.
+# forward eval; multi-threaded BLAS across many workers oversubscribes cores (an early
+# smoke test saw ~3x slowdown). Set before numpy so the thread pools size to 1.
 for _v in (
     "OMP_NUM_THREADS",
     "MKL_NUM_THREADS",

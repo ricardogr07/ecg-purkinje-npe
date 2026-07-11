@@ -2,10 +2,10 @@
 
 Sibling to test_forward_determinism.py (kept separate, not merged into it, to avoid touching
 a Science-owned file and to gate independently: this needs data/01/01.case, which is
-worktree-local and gitignored, not just the sim stack). load_geometry attaches the F5 UVC-grown
+checkout-local and gitignored, not just the sim stack). load_geometry attaches the UVC-grown
 Strocchi Purkinje trees to geom.tree_config, so this exercises determinism of the full,
 geometrically-native Strocchi path: its own Purkinje network, myocardium, FIM eikonal, and
-lead-field pseudo-ECG.
+1/|r| pseudo-ECG.
 
 Slow: builds the ~1.7M-tet Strocchi MyocardialMesh (FIM solver init alone is minutes on this
 mesh, far slower than crtdemo's ~18k-cell mesh) and runs the forward model twice, so it is

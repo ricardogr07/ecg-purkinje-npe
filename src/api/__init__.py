@@ -1,1 +1,1 @@
-"""FastAPI backend serving the results artifact (Contract C). Track I."""
+"""FastAPI backend serving the results artifact (the demo API)."""

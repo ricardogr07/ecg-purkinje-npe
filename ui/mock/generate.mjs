@@ -1,4 +1,4 @@
-// Deterministic generator for the Contract-B MOCK bundle (Design track, Day 2).
+// Deterministic generator for the Contract-B MOCK bundle.
 //
 // Produces:
 //   results.json   a faithful Contract-B artifact (7-param theta, 12-lead ECG,
@@ -9,9 +9,9 @@
 //                  lives in results.json activation_map.values, indexed 1:1.
 //
 // These are MOCK numbers, chosen to be physiologically plausible and consistent
-// with the Day-2 identifiability snapshot (delta_iv tightest, branch_angle
+// with the identifiability snapshot (delta_iv tightest, branch_angle
 // loosest, a cv/init_length_lv ridge). They are NOT measured results. The real
-// artifact from Contract B replaces this file wholesale at the Day 4 to 5 sync.
+// artifact from Contract B replaces this file wholesale.
 //
 // Run:  node ui/mock/generate.mjs
 // Deterministic: fixed seed, byte-stable output.
@@ -85,7 +85,7 @@ const REFERENCE_THETA = {
   cv_myo: 0.67,
 };
 
-// Contraction = posterior_std / prior_std. Consistent with Day-2: delta_iv the
+// Contraction = posterior_std / prior_std. delta_iv the
 // tightest ("pinned"), branch_angle the loosest ("unknowable"), and a
 // cv <-> init_length_lv ridge that loosens both marginals.
 const CONTRACTION = {

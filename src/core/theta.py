@@ -1,10 +1,10 @@
 """Contract A: the conduction parameter vector theta (frozen 7D box; cv_myo is the 7th,
 inferred param, exposed as a forward input via MyocardialMesh.set_fiber_cv).
 
-Ranges are the FROZEN Contract A box (director-approved, see .localagent/FREEZE_AND_PLAN.md
-and docs/research-brief.md), arrived at independently of the thesis BOECGParameter bounds (brief
-section 8). Sourced anchors: cv (Maguy 2009 Purkinje CV), branch_angle / w (Sahli Costabal
-2015 + Tanikella 2025), init_length labeled OUR modeling choice (Tanikella fixed 50 mm, LV).
+Ranges are the frozen Contract A box (see docs/research-brief.md), arrived at independently of the
+thesis BOECGParameter bounds. Sourced anchors: cv (Maguy 2009 Purkinje CV), branch_angle / w
+(Sahli Costabal 2015 + Tanikella 2025), init_length labeled OUR modeling choice (Tanikella fixed
+50 mm, LV).
 delta_iv is the dyssynchrony regime; its lower bound [-90] is PROVENANCE-PENDING (Research
 P0 sourcing a BBB/CRT interventricular-delay range), so the delta_iv contraction is not a
 public claim until sourced. delta_iv is a RELATIVE LV-RV delay only (absolute timing is
@@ -28,7 +28,7 @@ THETA_NAMES: tuple[str, ...] = (
 )
 
 # name -> (lo, hi). FROZEN Contract A 7D box. cv_myo is inferred over [0.5, 1.0] (Fu 2024);
-# delta_iv lower bound provenance-pending (see note). cv floor lowered 1.5 -> 1.3 (director Jul 8):
+# delta_iv lower bound provenance-pending (see note). cv floor lowered 1.5 -> 1.3:
 # the crtdemo true Purkinje CV ~1.4 sat at the old floor, so [1.3, 3.5] brackets it interior.
 PRIOR_BOUNDS: dict[str, tuple[float, float]] = {
     "cv": (1.3, 3.5),

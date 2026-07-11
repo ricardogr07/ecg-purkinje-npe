@@ -1,8 +1,8 @@
-"""FastAPI backend, Contract C (Code <-> Design). One origin, no CORS (shelter-pulse pattern).
+"""FastAPI backend for the demo API. One origin, no CORS.
 
 Endpoints:
   GET  /health                -> {status, git_sha}
-  POST /infer                 -> Contract-B artifact (load-and-serve; real NPE swaps in Day 4->5)
+  POST /infer                 -> Contract-B artifact (load-and-serve)
   GET  /geometry/{geometry_id} -> mesh descriptor for the 3D view
 
 Served in one nginx + uvicorn task; the frontend is same-origin so no CORS is configured.
@@ -38,7 +38,7 @@ def health() -> dict[str, str]:
 def infer(req: InferRequest) -> dict[str, Any]:
     art = artifact.load()
     # Echo the request context onto the served artifact (real inference conditions on
-    # input_ecg at the Day 4->5 swap; tonight the artifact is the mock/real snapshot).
+    # input_ecg in a future live-inference path; today the artifact is the served snapshot).
     art["geometry_id"] = req.geometry_id or art.get("geometry_id")
     art["observation_kind"] = req.observation_kind or art.get("observation_kind")
     if req.input_ecg is not None:

@@ -4,7 +4,7 @@ Same theta twice -> bit-identical 12-lead ECG. This is what makes the mandatory
 observation-noise model (Contract D) meaningful: on a deterministic simulator, the
 added noise is the only source of stochasticity, so calibration is a real test. If
 determinism regresses, the whole calibration story is compromised. See docs/architecture.md
-section 2 and brief 5.6; mirrors the day-1 determinism gate.
+section 2 and brief 5.6; mirrors the determinism gate.
 
 Slow: loads the crtdemo geometry and grows the LV/RV trees + eikonal twice (seconds
 each), so it is gated behind RUN_SLOW (see conftest). Skips if the sim stack is absent.

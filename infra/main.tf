@@ -1,5 +1,5 @@
 # Deploy infra for the ecg-purkinje-npe demo: private S3 bucket + CloudFront (HTTPS, OAC).
-# Built from scratch for this project (not reused from shelter-pulse). The Next.js static
+# Built from scratch for this project. The Next.js static
 # export (ui/out) is synced to the bucket; CloudFront serves it over its default *.cloudfront.net
 # certificate. Single-page site (one route "/"), so default_root_object=index.html is enough.
 #

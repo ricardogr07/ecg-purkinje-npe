@@ -8,7 +8,7 @@ the tag-presence error paths, which fire before any UVC lookup. `_tiny_uvc_mesh`
 fields, LV/RV point sets kept disjoint to avoid shared-boundary-point sign ambiguity)
 exercises the real extraction logic. The real-mesh test runs against the extracted
 data/01/01.case (Strocchi et al. 2020, Zenodo 3890034, CC-BY-4.0) and skips cleanly if
-that file isn't present in this worktree.
+that file isn't present in this checkout.
 """
 
 from pathlib import Path
@@ -121,7 +121,7 @@ def test_extract_endocardium_real_strocchi_mesh():
 
     Skips cleanly if the file isn't present (mirrors the RUN_SLOW gating in
     test_forward_determinism.py for the other real-mesh-dependent test, but this one is
-    file-existence gated since the extracted case is worktree-local, not RUN_SLOW gated,
+    file-existence gated since the extracted case is checkout-local, not RUN_SLOW gated,
     since it does not require the full sim stack).
     """
     mesh = strocchi.read_mesh(REAL_CASE_PATH)

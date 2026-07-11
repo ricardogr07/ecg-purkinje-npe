@@ -1,7 +1,7 @@
 // Contract-B artifact types + a safe loader.
 //
 // The demo currently reads the bundled MOCK (ui/mock/*.json). To swap to the
-// real backend (Contract C, Day 4 to 5 sync), replace the two imports below with
+// real backend (the demo API), replace the two imports below with
 // a fetch of `POST /infer` and `GET /geometry/{id}`; every component already
 // treats optional blocks as possibly-missing, so a leaner real artifact degrades
 // gracefully rather than crashing.
@@ -39,7 +39,7 @@ export interface Calibration {
   nominal_level?: number;
   n_sbc_ranks?: number;
   sbc_bins?: number;
-  // The Day-2 mock emits full rank-count histograms per param; the real emitter
+  // The mock emits full rank-count histograms per param; the real emitter
   // (src/npe/emit.py) emits a single per-param SBC KS p-value instead. Accept both
   // shapes so the panel degrades to a numeric badge rather than crashing on `.reduce`.
   sbc?: Record<string, { before: number[] | number; after: number[] | number }>;

@@ -12,7 +12,7 @@
 // (none currently do; activation_map is an optional Contract-B block).
 //
 // Never fails the build: if outputs/ has no day3 artifact (e.g. a fresh
-// worktree checkout, or CI without a populated outputs/), the existing
+// fresh checkout, or CI without a populated outputs/), the existing
 // committed results.real.json is left untouched.
 //
 // Run:  node ui/mock/gen-real.mjs

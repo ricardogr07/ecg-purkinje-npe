@@ -25,7 +25,7 @@ def load_geometry(name: str):
         return _load()
     if name in STUBS:
         raise NotImplementedError(
-            f"geometry '{name}' adapter is a Phase 3 stub (needs mesh ingestion + "
+            f"geometry '{name}' adapter is a stub (needs mesh ingestion + "
             f"body-surface electrode modeling); only {SUPPORTED} is wired"
         )
     raise ValueError(f"unknown geometry '{name}'; supported: {SUPPORTED + STUBS}")

@@ -1,7 +1,7 @@
 """Forward model on the crtdemo geometry: theta -> 12-lead ECG.
 
 Chain: purkinje-uv fractal trees (LV, RV) -> Purkinje activation -> myocardial-mesh
-coupling loop (myocardial eikonal + lead-field pseudo-ECG) -> 12-lead ECG. The geometry
+coupling loop (myocardial eikonal + 1/|r| pseudo-ECG) -> 12-lead ECG. The geometry
 (volumetric mesh + fibers + electrodes) is loaded once; theta varies per call.
 
 Non-theta tree preset (seeds, fascicles, N_it) mirrors the myocardial-mesh e2e acceptance

@@ -581,7 +581,7 @@ def grow_purkinje_trees(mesh: Any, out_dir: str | Path, n_it: int | None = None)
     return trees[0], trees[1]
 
 
-# data/ is gitignored (see .gitignore); these are worktree-local defaults, not shipped in git.
+# data/ is gitignored (see .gitignore); these are checkout-local defaults, not shipped in git.
 DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "01"
 DEFAULT_CASE_PATH = DATA_DIR / "01.case"
 DEFAULT_CACHE_DIR = DATA_DIR / "_forward_inputs"

@@ -3,13 +3,13 @@
 Resolution order (first hit wins), so `/infer` is always live for the demo:
   1. $ECG_ARTIFACT                 explicit path override
   2. outputs/day3_*results*.json   newest real Science snapshot (Contract B)
-  3. ui/mock/results.json          the Design track's mock bundle
+  3. ui/mock/results.json          the illustrative mock bundle
   4. a built-in placeholder        prior-drawn, no fabricated inference
 
-Tonight this is load-and-serve: `/infer` returns the resolved Contract-B artifact.
-Real NPE inference swaps in behind `load()` at the Day 4->5 sync.
+This is load-and-serve: `/infer` returns the resolved Contract-B artifact.
+Real NPE inference can swap in behind `load()`.
 
-Cowork amendment: we attach `posterior.mean`/`std` (derived from `posterior.samples`
+We attach `posterior.mean`/`std` (derived from `posterior.samples`
 when absent) and `posterior.prior_bounds` (frozen Contract A). `posterior.true_theta`
 is passed through only, never synthesised for a real run.
 """
@@ -89,7 +89,7 @@ def _amend_posterior(art: dict[str, Any]) -> dict[str, Any]:
 
 
 def load() -> dict[str, Any]:
-    """Return the resolved Contract-B artifact with the Cowork posterior amendment applied.
+    """Return the resolved Contract-B artifact with the posterior mean/std amendment applied.
 
     Re-read each call so a freshly written day3 snapshot hot-swaps without a restart.
     """
@@ -102,7 +102,7 @@ def geometry_view(geometry_id: str, art: dict[str, Any]) -> dict[str, Any]:
     """Contract C GET /geometry payload. Serves the artifact's activation map field if present.
 
     ponytail: a real surface+fields serializer lands with the Strocchi adapter output at
-    integration (Day 4+); tonight this is a graceful descriptor, never a 500.
+    integration (future); today this is a graceful descriptor, never a 500.
     """
     return {
         "geometry_id": geometry_id,

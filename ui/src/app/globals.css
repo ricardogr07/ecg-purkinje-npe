@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* Dark-first, cinematic for the demo video. Zinc neutrals + a cool accent,
-   mirroring the shelter-pulse palette (zinc / indigo / emerald / amber). */
+   using a zinc / indigo / emerald / amber palette. */
 :root {
   color-scheme: dark;
   --background: #09090b; /* zinc-950 */

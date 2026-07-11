@@ -1,4 +1,4 @@
-"""Strocchi end-to-end forward (F5 UVC trees + F6-cached FIM eikonal + lead-field pseudo-ECG),
+"""Strocchi end-to-end forward (UVC trees + cached FIM eikonal + 1/|r| pseudo-ECG),
 plus the demo geometry/activation export.
 
 Runs forward(REFERENCE_THETA, strocchi_geom) ONCE (the literal chain, on the Strocchi heart's own

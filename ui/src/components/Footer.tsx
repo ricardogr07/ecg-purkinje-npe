@@ -1,4 +1,4 @@
-// Static footer. Credits + license line, mirroring the shelter-pulse footer
+// Static footer. Credits + license line
 // (github / personal site / linkedin, with icons). Copy and links verbatim from
 // the frozen standalone. Not a page-level banner: it makes no data claim.
 

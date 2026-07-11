@@ -30,7 +30,7 @@ def test_infer_fallback_is_valid_contract_b():
         assert key in b
     assert b["geometry_id"] == "cardiac_demo"
     post = b["posterior"]
-    # Cowork amendment present.
+    # posterior mean/std amendment present.
     assert "prior_bounds" in post
     assert post["prior_bounds"]["cv"] == [1.3, 3.5]  # frozen cv floor lowered 1.5 -> 1.3 (Jul 8)
     if post.get("samples"):
