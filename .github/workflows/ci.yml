@@ -5,8 +5,10 @@ on:
     branches: [main, "science/**"]
   pull_request:
 
+# python-ci and ui-ci run first (in parallel). package-ci and docker-build each depend on BOTH
+# passing, then run in parallel with each other.
 jobs:
-  test:
+  python-ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,11 +20,42 @@ jobs:
       - run: uv run ruff check .
       # Default suite; sim-heavy tests are gated behind RUN_SLOW (see tests/conftest.py).
       - run: uv run pytest -q --cov=src --cov=conduction_lens --cov-report=term-missing
-      # Packaging: uv sync installs the project, so the console entry point must resolve and
-      # import the full science stack (conduction_lens -> core/sim/npe/calib).
+
+  ui-ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run type-check
+      # prebuild (gen-real.mjs) degrades gracefully without outputs/ (uses the committed artifact).
+      - run: npm run build
+
+  package-ci:
+    needs: [python-ci, ui-ci]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+          enable-cache: true
+      # uv sync installs the project, so the console entry point must resolve and import the full
+      # science stack (conduction_lens -> core/sim/npe/calib). uv build proves the wheel packages.
+      - run: uv sync --group dev
       - run: uv run conduction-lens --help
+      - run: uv build --wheel
 
   docker-build:
+    needs: [python-ci, ui-ci]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
