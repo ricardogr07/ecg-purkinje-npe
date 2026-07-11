@@ -6,18 +6,10 @@
 # AWS_DEPLOY_ROLE_ARN to the github_actions_deploy_role_arn output (and AWS_S3_BUCKET /
 # CLOUDFRONT_DISTRIBUTION_ID to the bucket / distribution_id outputs).
 #
-# Note: if this AWS account already has a GitHub OIDC provider, import it instead of creating a
-# second one (terraform import aws_iam_openid_connect_provider.github <arn>), or swap the resource
-# for a data source.
-
-data "tls_certificate" "github" {
-  url = "https://token.actions.githubusercontent.com/.well-known/openid-configuration"
-}
-
-resource "aws_iam_openid_connect_provider" "github" {
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.github.certificates[0].sha1_fingerprint]
+# The AWS account already has the GitHub OIDC provider (shared, account-level), so reference it via a
+# data source rather than managing that shared resource here.
+data "aws_iam_openid_connect_provider" "github" {
+  url = "https://token.actions.githubusercontent.com"
 }
 
 # Trust: only this repo's workflows running on the main branch may assume the role.
@@ -27,7 +19,7 @@ data "aws_iam_policy_document" "gha_assume" {
     actions = ["sts:AssumeRoleWithWebIdentity"]
     principals {
       type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.github.arn]
+      identifiers = [data.aws_iam_openid_connect_provider.github.arn]
     }
     condition {
       test     = "StringEquals"
