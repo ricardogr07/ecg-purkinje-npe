@@ -3,6 +3,13 @@
 
 const CARDS = [
   {
+    title: "The paper",
+    hint: "IEEE / Zenodo manuscript",
+    body: "The full write-up: methods, the calibrated identifiability spectrum, calibration, and the honest limitations, as a self-contained IEEE-format paper.",
+    href: "https://github.com/ricardogr07/ecg-purkinje-npe/blob/main/technical-writeup/ieee-paper/paper.pdf",
+    linkText: "Read the paper (PDF)",
+  },
+  {
     title: "Verification ledger",
     hint: "every claim, checked",
     body: "The record of what was claimed, what was checked, and what was retracted. The corrections above are drawn from it.",

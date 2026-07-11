@@ -44,7 +44,7 @@ export default function Header() {
               </a>
             ))}
             <a
-              href="https://github.com/ricardogr07/ecg-purkinje-npe"
+              href="https://github.com/ricardogr07/ecg-purkinje-npe/blob/main/technical-writeup/ieee-paper/paper.pdf"
               className="text-zinc-400 hover:text-indigo-300"
             >
               Paper
