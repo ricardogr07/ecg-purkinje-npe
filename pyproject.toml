@@ -1,6 +1,6 @@
 [project]
 name = "ecg-purkinje-npe"
-version = "0.1.0"
+version = "0.2.0"
 description = "Calibrated, amortized identifiability of Purkinje conduction from the surface ECG."
 readme = "README.md"
 requires-python = ">=3.11"
