@@ -77,8 +77,9 @@ testpaths = ["tests"]
 line-length = 100
 target-version = "py311"
 src = ["src", "tests", "conduction_lens"]
-# Vendored own libraries and the Design track's ui/ keep their own style/CI; not ours to lint.
-extend-exclude = ["packages", "ui"]
+# Vendored libraries, the ui/ demo, and the technical-writeup/ paper lane keep their own style/CI;
+# not ours to lint.
+extend-exclude = ["packages", "ui", "technical-writeup"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
