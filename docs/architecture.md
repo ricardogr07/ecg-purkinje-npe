@@ -11,11 +11,11 @@ No real ECG appears anywhere in this work. The forward is a pseudo-ECG in an unb
 
 ## 1. The scientific question
 
-**What.** Given only a surface ECG, how much of the heart's fast-wiring (the His-Purkinje conduction system) can you actually recover, and how much is fundamentally unknowable? We answer this at fixed anatomy by training an amortized Neural Posterior Estimator (NPE) and reporting a per-parameter identifiability spectrum with honest, calibrated uncertainty.
+**What.** Given only a surface ECG, how much of the heart's fast-wiring (the His-Purkinje conduction system) can you actually recover, and how much stays unresolved at a stated noise floor? We answer this at fixed anatomy by training an amortized Neural Posterior Estimator (NPE) and reporting a per-parameter identifiability spectrum with honest, calibrated uncertainty.
 
 **How.** A simulator turns conduction parameters and a Purkinje network into a 12-lead ECG. We run it thousands of times, train an AI to invert it (ECG in, a distribution over parameters out), and grade that AI's confidence with formal calibration tests (SBC, TARP).
 
-**Why.** Personalizing the conduction system underpins cardiac digital twins (CRT, diagnosis, in-silico trials). The honest object is not a single fit but a posterior, possibly multimodal or degenerate. Naming which parameters are pinned and which are unknowable, with calibration you can trust, is the contribution.
+**Why.** Personalizing the conduction system underpins cardiac digital twins (CRT, diagnosis, in-silico trials). The honest object is not a single fit but a posterior, possibly multimodal or degenerate. Naming which parameters are well constrained and which are diffuse, with calibration you can trust, is the contribution.
 
 **Next.** Move from the toy `crtdemo` geometry to the public Strocchi anatomy, add the waveform path, and validate against a non-amortized baseline.
 
@@ -28,7 +28,7 @@ flowchart LR
   E --> O["observation x<br/>features and/or waveform"]
   O --> NPE["amortized NPE<br/>normalizing flow"]
   NPE --> P["posterior over theta<br/>+ conformal calibration"]
-  P --> F["identifiability map<br/>pinned vs unknowable"]
+  P --> F["identifiability map<br/>resolved vs unresolved"]
 ```
 
 ---
@@ -109,7 +109,7 @@ The full pipeline runs. Contract A is frozen at 7 parameters and Contract D (abs
 
 **What.** From a calibrated synthetic-truth result to a public-anatomy, baseline-validated finding with a demo, plus the fidelity residual closed as far as time allows.
 
-**Next.** Expose `cv_myo` for the 7D sweep (also helps the fidelity residual); re-anchor the reference to the corrected operating point; Strocchi anatomy ingestion; the waveform + CNN-embedding NPE and the paired features-vs-waveform comparison; a BO+ABC baseline (`jaxbo`) on shared held-out ECGs; then the demo (3D activation map, ECG overlay, corner plot, calibration panel, pinned-vs-unknowable reveal) and the write-up.
+**Next.** Expose `cv_myo` for the 7D sweep (also helps the fidelity residual); re-anchor the reference to the corrected operating point; Strocchi anatomy ingestion; the waveform + CNN-embedding NPE and the paired features-vs-waveform comparison; a BO+ABC baseline (`jaxbo`) on shared held-out ECGs; then the demo (3D activation map, ECG overlay, corner plot, calibration panel, resolved-vs-unresolved reveal) and the write-up.
 
 ```mermaid
 flowchart LR
