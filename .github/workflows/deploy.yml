@@ -1,0 +1,59 @@
+name: deploy
+
+# Continuous deployment of the demo UI to S3 + CloudFront.
+#
+# Runs ONLY after the `ci` workflow concludes successfully on `main`, so a red CI never ships.
+# Because `main` is branch-protected (PR + green CI required), this effectively deploys every
+# merged PR. Auth is GitHub OIDC into a least-privilege role provisioned by Terraform
+# (infra/github-actions.tf); no long-lived AWS keys are stored.
+#
+# One-time activation (after this merges):
+#   1. cd infra && terraform init && terraform apply   # creates the OIDC role, prints its ARN
+#   2. set three repo Actions variables (Settings -> Secrets and variables -> Actions -> Variables),
+#      or via gh:
+#        gh variable set AWS_DEPLOY_ROLE_ARN --body "<github_actions_deploy_role_arn output>"
+#        gh variable set AWS_S3_BUCKET --body "<bucket output>"
+#        gh variable set CLOUDFRONT_DISTRIBUTION_ID --body "<distribution_id output>"
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # mint the OIDC token for AWS
+  contents: read
+
+jobs:
+  deploy:
+    # Deploy only a green CI run.
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }} # the exact commit that passed CI
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - name: Build static export
+        working-directory: ui
+        run: |
+          npm ci
+          npm run build
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Sync ui/out to S3
+        run: aws s3 sync ui/out "s3://${{ vars.AWS_S3_BUCKET }}" --delete
+      - name: Invalidate CloudFront
+        run: aws cloudfront create-invalidation --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" --paths '/*'
