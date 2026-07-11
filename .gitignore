@@ -71,3 +71,7 @@ ui/dev-server.log
 ui/pnpm-lock.yaml
 ui/pnpm-workspace.yaml
 *.stackdump
+
+# Local video script and dev logs (never commit)
+docs/video-script.md
+*.log
