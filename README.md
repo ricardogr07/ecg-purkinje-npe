@@ -68,6 +68,21 @@ Each vendored library retains its upstream LICENSE. `myocardial-mesh` (repo
 `purkinje-learning-myocardial-mesh`) is a separate published MIT library for the forward simulator,
 distinct from the thesis-analysis package `purkinje-learning`, which is deliberately not used.
 
+## Acknowledgements
+
+This work is heavily inspired by, and builds directly on, Francisco Sahli Costabal's line of research
+on learning the His-Purkinje system from the ECG, in particular "Probabilistic learning of the Purkinje
+network from the ECG" (Alvarez-Barrientos, Salinas-Camus, Pezzuto, Sahli Costabal, Medical Image
+Analysis 2025, [arXiv:2312.09887](https://arxiv.org/abs/2312.09887)). That paper is the direct point of
+departure for this follow-on characterization; our contribution is to make the same target problem
+amortized and formally calibrated.
+
+The vendored `purkinje-uv` and `myocardial-mesh` libraries were developed and reworked by the author
+around this problem during their MSc, and the fractal-tree Purkinje generation they implement is the
+Sahli Costabal, Hurtado, Kuhl 2015 method ("Generating Purkinje networks in the human heart",
+J. Biomech., PMID 26748729). See [`docs/related-work.md`](docs/related-work.md) for the full prior-art
+positioning.
+
 ## License
 
 Apache-2.0.
