@@ -51,6 +51,9 @@ under-estimates depolarization amplitude by over an order of magnitude versus a 
   zero I/O (importable, testable).
 - Backend FastAPI; frontend Next.js + Tailwind; static export to S3 + CloudFront. **CPU-only, no GPU.**
 - Conventional commits.
+- **`main` is protected (from v0.2.0):** no direct commits or pushes. Every change lands via a branch
+  and a pull request with the full CI matrix (python-ci, ui-ci, package-ci, docker-build) green before
+  merge. The v0.2.0 tag and the deployed site are the stable fallback.
 - **NEVER use em or en dashes** anywhere (code, comments, docs, commit messages, UI copy). Use a
   comma, parentheses, a colon, or a plain hyphen.
 - **Verification discipline.** Every factual/scientific claim is checked against a primary source

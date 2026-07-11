@@ -37,10 +37,13 @@ Source lives under `src/` (a pure, I/O-free `core/` plus `sim/`, `npe/`, `calib/
 
 ## Pull requests
 
+As of v0.2.0, `main` is protected: it accepts no direct pushes, and every change lands through a
+pull request with the full CI matrix green. This keeps the shipped, deployed version stable.
+
 1. Branch from `main`, make focused commits.
 2. Ensure `uv run pytest` and `uv run ruff check .` pass locally.
-3. Open a PR describing the change and, for any scientific claim, its source. CI must be green
-   before review.
+3. Open a PR describing the change and, for any scientific claim, its source. CI (Python, UI,
+   packaging, Docker) must be green before merge.
 
 ## Reporting issues
 
