@@ -1,0 +1,6 @@
+flowchart TD
+  TA["transplant true activation<br/>into our geom"] --> C1000["corr 1.000 vs True_ecg<br/>self-consistency, not fidelity"]
+  RT["REFERENCE theta off<br/>dv 0, cv 2.0, il out of range"] --> R02["corr 0.199"]
+  RT --> FIX["correct cv~1.4, dv~-75,<br/>il in [30,60]"]
+  FIX --> R08["corr 0.788"]
+  R08 --> RES["residual = parameter error<br/>(inverse-crime recovery)"]

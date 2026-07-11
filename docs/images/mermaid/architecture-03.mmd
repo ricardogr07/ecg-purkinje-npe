@@ -1,0 +1,12 @@
+flowchart LR
+  SW["checkpointed sweep<br/>theta -> ECG"] --> NF["features + Contract D noise"]
+  NF --> TR["NPE train (sbi flow)"]
+  TR --> PO["posterior"]
+  PO --> CF["per-parameter conformal"]
+  CF --> C1["contraction + corner plot"]
+  CF --> C2["SBC ranks"]
+  CF --> C3["TARP coverage"]
+  C2 --> V{"calibrated?"}
+  C3 --> V
+  V -->|"yes"| FIND["trustworthy synthetic-truth finding"]
+  V -->|"residual"| DEG["residual joint miss = degeneracy signal"]

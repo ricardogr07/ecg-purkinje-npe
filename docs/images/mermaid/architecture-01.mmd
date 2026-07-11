@@ -1,0 +1,9 @@
+flowchart LR
+  T["theta: 7 conduction knobs<br/>cv, delta_iv, init_length LV/RV,<br/>branch_angle, w, cv_myo"] --> N
+  S["network topology<br/>tree seed nodes"] --> N
+  N["purkinje-uv<br/>fractal Purkinje network"] --> A["myocardial-mesh<br/>activation field"]
+  A --> E["12-lead ECG"]
+  E --> O["observation x<br/>features and/or waveform"]
+  O --> NPE["amortized NPE<br/>normalizing flow"]
+  NPE --> P["posterior over theta<br/>+ conformal calibration"]
+  P --> F["identifiability map<br/>resolved vs unresolved"]

@@ -1,0 +1,7 @@
+flowchart TD
+  TH["theta + seed nodes"] --> GT["FractalTree grow<br/>LV and RV"]
+  GT --> CL{"run_ecg_core<br/>coupling loop, kmax=2"}
+  CL -->|"Purkinje pass"| MY["myocardium FIM solve<br/>seeded at PMJs"]
+  MY -->|"activation field"| CL
+  CL --> LF["new_get_ecg<br/>1/r kernel, no torso"]
+  LF --> ECG["12-lead ECG"]

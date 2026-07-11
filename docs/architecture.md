@@ -1,11 +1,11 @@
-# Architecture, ecg-purkinje-npe
+# Architecture
 
 How the project works, end to end, and where it is going. Each section says **what** we do, **how**, **why**, and the **next** direction, with a diagram. Companion to `docs/research-brief.md` (scientific source of truth), `docs/contracts.md` (frozen interfaces), and `docs/results-summary.md` (the headline finding).
 
-## Thesis (honest, one line)
+## Thesis
 We built a calibrated, amortized identifiability characterization of the Purkinje conduction system from a simulated 12-lead ECG, at a stated observation-noise floor.
 
-No real ECG appears anywhere in this work. The forward is a pseudo-ECG in an unbounded homogeneous volume conductor, amplitudes are reported in arbitrary units scaled to a stated mV operating point, and every target is simulator output. Alongside the identifiability result we surfaced and corrected three of our own errors (SBC found overconfidence; `ridge_confirm` refuted a degeneracy headline; an audit found a 3000x SNR error), each of which would have carried a false headline. That self-correction record is the methodological contribution. Comparison against measured ECGs is future work.
+No real ECG has been yet run for this work. The forward is a pseudo-ECG in an unbounded homogeneous volume conductor, amplitudes are reported in arbitrary units scaled to a stated mV operating point, and every target is simulator output. Comparison against measured ECGs is future work.
 
 ---
 
@@ -17,23 +17,14 @@ No real ECG appears anywhere in this work. The forward is a pseudo-ECG in an unb
 
 **Why.** Personalizing the conduction system underpins cardiac digital twins (CRT, diagnosis, in-silico trials). The honest object is not a single fit but a posterior, possibly multimodal or degenerate. Naming which parameters are well constrained and which are diffuse, with calibration you can trust, is the contribution.
 
-**Next.** Move from the toy `crtdemo` geometry to the public Strocchi anatomy, add the waveform path, and validate against a non-amortized baseline.
+**Next.** Move from the `crtdemo` geometry to the public Strocchi anatomy, add the waveform path, and validate against a non-amortized baseline.
 
-```mermaid
-flowchart LR
-  T["theta: 7 conduction knobs<br/>cv, delta_iv, init_length LV/RV,<br/>branch_angle, w, cv_myo"] --> N
-  S["network topology<br/>tree seed nodes"] --> N
-  N["purkinje-uv<br/>fractal Purkinje network"] --> A["myocardial-mesh<br/>activation field"]
-  A --> E["12-lead ECG"]
-  E --> O["observation x<br/>features and/or waveform"]
-  O --> NPE["amortized NPE<br/>normalizing flow"]
-  NPE --> P["posterior over theta<br/>+ conformal calibration"]
-  P --> F["identifiability map<br/>resolved vs unresolved"]
-```
+<!-- source: images/mermaid/architecture-01.mmd -->
+![Pipeline overview: conduction parameters and network topology run through the purkinje-uv and myocardial-mesh simulator to a 12-lead ECG, then an amortized NPE to a calibrated identifiability map](images/architecture-01.svg)
 
 ---
 
-## 2. The forward model (simulator)
+## 2. The forward model
 
 **What.** A deterministic map from parameters to a 12-lead ECG on a fixed heart.
 
@@ -43,15 +34,8 @@ flowchart LR
 
 **Next.** The coupling converges in 2 iterations on `crtdemo`, so we cap `kmax=2`, a bit-identical 1.87x speedup (14.2s to 7.6s per run).
 
-```mermaid
-flowchart TD
-  TH["theta + seed nodes"] --> GT["FractalTree grow<br/>LV and RV"]
-  GT --> CL{"run_ecg_core<br/>coupling loop, kmax=2"}
-  CL -->|"Purkinje pass"| MY["myocardium FIM solve<br/>seeded at PMJs"]
-  MY -->|"activation field"| CL
-  CL --> LF["new_get_ecg<br/>1/r kernel, no torso"]
-  LF --> ECG["12-lead ECG"]
-```
+<!-- source: images/mermaid/architecture-02.mmd -->
+![Forward model: FractalTree growth feeds the run_ecg_core coupling loop (Purkinje pass and myocardial FIM solve) into the pseudo-ECG lead-field integral producing the 12-lead ECG](images/architecture-02.svg)
 
 ---
 
@@ -65,43 +49,25 @@ flowchart TD
 
 **Next.** Re-sweep storing waveforms so we can iterate the observation and train the waveform NPE without re-simulating, then a BO+ABC baseline as an independent check.
 
-```mermaid
-flowchart LR
-  SW["checkpointed sweep<br/>theta -> ECG"] --> NF["features + Contract D noise"]
-  NF --> TR["NPE train (sbi flow)"]
-  TR --> PO["posterior"]
-  PO --> CF["per-parameter conformal"]
-  CF --> C1["contraction + corner plot"]
-  CF --> C2["SBC ranks"]
-  CF --> C3["TARP coverage"]
-  C2 --> V{"calibrated?"}
-  C3 --> V
-  V -->|"yes"| FIND["trustworthy synthetic-truth finding"]
-  V -->|"residual"| DEG["residual joint miss = degeneracy signal"]
-```
+<!-- source: images/mermaid/architecture-03.mmd -->
+![Inference and calibration: a checkpointed sweep and Contract D noise train the NPE flow, then per-parameter conformal recalibration feeds contraction, SBC, and TARP into a calibrated finding or a residual degeneracy signal](images/architecture-03.svg)
 
 ---
 
 ## 4. The two honest results
 
-**Result A, synthetic-truth identifiability.** On the simulator, with the frozen contract and noise model, a calibrated per-parameter contraction spectrum and a posterior degeneracy map. Independent corroboration: a third-party Sobol analysis (Tanikella 2025) predicts `branch_angle` and `w` are weakly identifiable and interaction-heavy, which is exactly the diffuse-block degeneracy we expect. This result is calibration-honest and synthetic-truth, not real-ECG-validated. (Headline numbers land from the frozen-contract sweep; see `docs/status-day1.md` and the results summary.)
+**Result A, synthetic-truth identifiability.** On the simulator, with the frozen contract and noise model, a calibrated per-parameter contraction spectrum and a posterior degeneracy map. Independent corroboration: a third-party Sobol analysis (Tanikella 2025) predicts `branch_angle` and `w` are weakly identifiable and interaction-heavy, which is exactly the diffuse-block degeneracy we expect. This result is calibration-honest and synthetic-truth, not real-ECG-validated.
 
-**Result B, parameter recovery against a synthetic target (not a real-ECG comparison).** There is no real ECG here. `True_ecg` is a pickled simulator output stored beside the true Purkinje trees and used as a regression fixture (`myocardial-mesh/tests/e2e/test_nb_parity.py`), not a patient recording. So the transplant result (true activation reproduces `True_ecg` at corr 1.000) is a self-consistency check, not evidence of fidelity: the same operator on the same activation field on the same mesh necessarily returns the same ECG. Result B compares our forward at the inferred theta against our forward at the stored true theta. Correcting the operating point lifts per-lead correlation from 0.199 to 0.788, and the remaining residual is parameter error (theta was not recovered exactly, and a different theta regrows a different tree). This is a parameter-recovery sanity check in the inverse-crime setting, not a fidelity result. A real forward-vs-measured-ECG comparison is future work with a named path (a bounded torso forward; EDGAR; MedalCare-XL).
+**Result B, parameter recovery against a synthetic target (not a real-ECG comparison).** There is no real ECG here. `True_ecg` is a pickled simulator output stored beside the true Purkinje trees and used as a regression fixture (`myocardial-mesh/tests/e2e/test_nb_parity.py`), not a patient recording. So the transplant result (true activation reproduces `True_ecg` at corr 1.000) is a self-consistency check, not evidence of fidelity: the same operator on the same activation field on the same mesh necessarily returns the same ECG. Result B compares our forward at the inferred theta against our forward at the stored true theta. Correcting the operating point lifts per-lead correlation from 0.199 to 0.788, and the remaining residual is parameter error. This is a parameter-recovery sanity check in the inverse-crime setting, not a fidelity result. A real forward-vs-measured-ECG comparison is future work.
 
-```mermaid
-flowchart TD
-  TA["transplant true activation<br/>into our geom"] --> C1000["corr 1.000 vs True_ecg<br/>self-consistency, not fidelity"]
-  RT["REFERENCE theta off<br/>dv 0, cv 2.0, il out of range"] --> R02["corr 0.199"]
-  RT --> FIX["correct cv~1.4, dv~-75,<br/>il in [30,60]"]
-  FIX --> R08["corr 0.788"]
-  R08 --> RES["residual = parameter error<br/>(inverse-crime recovery)"]
-```
+<!-- source: images/mermaid/architecture-04.mmd -->
+![Two honest results: transplanting the true activation reproduces True_ecg at corr 1.000 (self-consistency, not fidelity), while correcting the operating point lifts parameter-recovery correlation from 0.199 to 0.788 with the residual attributable to parameter error](images/architecture-04.svg)
 
 ---
 
 ## 5. Where we are
 
-The full pipeline runs. Contract A is frozen at 7 parameters and Contract D (absolute-mV noise) is set. The calibration bottleneck is diagnosed as inference-side and addressed by a per-parameter conformal recalibrator (self-check passes on synthetic data). Result B's parameter recovery in the inverse-crime setting reaches corr 0.788 at the corrected operating point, with the residual attributable to parameter error. The identifiability result stays framed as a synthetic-truth SBC study; there is no real-ECG comparison anywhere. Headline calibration numbers (before/after SBC, TARP, the contraction spectrum, conformal factors) are produced by the frozen-contract sweep and read independently before they become claims.
+The full pipeline runs. Contract A is frozen at 7 parameters and Contract D (absolute-mV noise) is set. The calibration bottleneck is diagnosed as inference-side and addressed by a per-parameter conformal recalibrator (self-check passes on synthetic data). Result B's parameter recovery in the inverse-crime setting reaches corr 0.788 at the corrected operating point, with the residual attributable to parameter error. The identifiability result stays framed as a synthetic-truth SBC study.
 
 ---
 
@@ -111,11 +77,5 @@ The full pipeline runs. Contract A is frozen at 7 parameters and Contract D (abs
 
 **Next.** Expose `cv_myo` for the 7D sweep (also helps the fidelity residual); re-anchor the reference to the corrected operating point; Strocchi anatomy ingestion; the waveform + CNN-embedding NPE and the paired features-vs-waveform comparison; a BO+ABC baseline (`jaxbo`) on shared held-out ECGs; then the demo (3D activation map, ECG overlay, corner plot, calibration panel, resolved-vs-unresolved reveal) and the write-up.
 
-```mermaid
-flowchart LR
-  D1["done<br/>forward + pipeline<br/>+ calibration harness + fidelity diagnosis"] --> D2["now<br/>frozen 7D sweep<br/>+ conformal + honest fidelity table"]
-  D2 --> D3["Strocchi anatomy"]
-  D3 --> D4["waveform NPE<br/>features vs waveform"]
-  D4 --> D5["BO+ABC baseline (jaxbo)"]
-  D5 --> D6["demo + write-up"]
-```
+<!-- source: images/mermaid/architecture-05.mmd -->
+![Roadmap: from the completed forward, pipeline, and calibration harness through the frozen 7D sweep with conformal recalibration, to Strocchi anatomy, the waveform NPE, a BO+ABC baseline, and the demo plus write-up](images/architecture-05.svg)
