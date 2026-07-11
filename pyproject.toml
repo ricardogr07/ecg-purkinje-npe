@@ -18,6 +18,28 @@ dependencies = [
     "httpx",
 ]
 
+[project.scripts]
+conduction-lens = "conduction_lens.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# The proven science lives under src/ as flat top-level packages (core, sim, ...) and the CLI
+# wrapper under conduction_lens/. Install them all top-level, NO namespace rename, so sbi's
+# pickled posteriors keep resolving their import paths. src/foo installs as foo (hatchling strips
+# the src/ prefix).
+[tool.hatch.build.targets.wheel]
+packages = [
+    "conduction_lens",
+    "src/core",
+    "src/sim",
+    "src/npe",
+    "src/calib",
+    "src/adapter",
+    "src/api",
+]
+
 # Own libraries are vendored in-tree (packages/) and consumed editable, so our changes to
 # them take effect live. purkinje-uv = fractal tree + Purkinje activation; myocardial-mesh =
 # volumetric myocardial eikonal + 12-lead ECG; jaxbo = GP Bayesian-optimization baseline.
@@ -46,11 +68,6 @@ dev = [
 baseline = [
     "jaxbo",
 ]
-
-# Research app, not a distributable package: uv manages the venv and deps but does
-# not build/install this project. Source is on the path via pytest pythonpath below.
-[tool.uv]
-package = false
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "."]

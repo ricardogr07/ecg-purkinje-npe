@@ -17,7 +17,7 @@ from pathlib import Path
 # Bootstrap `src/` onto the path so `import core.*`, `import sim.*`, `import calib.*` resolve,
 # matching pytest's `pythonpath = ["src"]`. Idempotent.
 _SRC = Path(__file__).resolve().parents[1] / "src"
-if str(_SRC) not in sys.path:
+if _SRC.is_dir() and str(_SRC) not in sys.path:  # source checkout only; a no-op once installed
     sys.path.insert(0, str(_SRC))
 
 __version__ = "0.1.0"

@@ -18,6 +18,9 @@ jobs:
       - run: uv run ruff check .
       # Default suite; sim-heavy tests are gated behind RUN_SLOW (see tests/conftest.py).
       - run: uv run pytest -q --cov=src --cov=conduction_lens --cov-report=term-missing
+      # Packaging: uv sync installs the project, so the console entry point must resolve and
+      # import the full science stack (conduction_lens -> core/sim/npe/calib).
+      - run: uv run conduction-lens --help
 
   docker-build:
     runs-on: ubuntu-latest
@@ -25,6 +28,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build CLI / pipeline image
         run: docker build -f Dockerfile.cli --build-arg GIT_SHA=${GITHUB_SHA::7} -t conduction-lens:ci .
+      - name: Run the CLI image (packaging smoke)
+        run: docker run --rm conduction-lens:ci --help
       # The demo image bakes a Contract-B artifact at repo root; the real one lives in gitignored
       # outputs/, so stage a minimal placeholder for the build-only check (image is not run here).
       - name: Stage placeholder Contract-B for the demo image
