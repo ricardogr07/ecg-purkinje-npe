@@ -71,7 +71,7 @@ def run(cfg: RunConfig) -> Path:
     if cfg.dim != 7:
         raise SystemExit("only the frozen 7D Contract A is supported (--dim 7)")
     if cfg.obs != "features":
-        raise SystemExit(f"--obs {cfg.obs} is not wired yet (features only; waveform is a stretch)")
+        raise SystemExit(f"--obs {cfg.obs} is not wired (features only)")
     geometry.validate(cfg.geometry)
     _write_manifest(cfg, out)
 

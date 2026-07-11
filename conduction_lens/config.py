@@ -10,10 +10,10 @@ from dataclasses import asdict, dataclass
 class RunConfig:
     """One pipeline run. Serialized into the run manifest for reproducibility."""
 
-    geometry: str = "crtdemo"  # crtdemo (wired) | strocchi | medalcare (Phase 2/3 stubs)
+    geometry: str = "crtdemo"  # crtdemo, strocchi wired; medalcare a stub
     dim: int = 7  # frozen Contract A is 7D; only 7 is supported
     budget: int = 5000  # total usable sims (train + calib)
-    obs: str = "features"  # features (wired) | waveform (stretch)
+    obs: str = "features"  # features wired; waveform not wired
     out: str = "runs/crtdemo_7d"
     seed: int = 1234
     noise_sigma_mv: float = 0.025  # Contract D waveform sigma

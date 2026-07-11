@@ -1,12 +1,9 @@
-"""conduction_lens: amortized + calibrated Purkinje conduction identifiability from the ECG.
+"""conduction_lens: amortized, calibrated Purkinje conduction identifiability from the ECG.
 
-An installable, CLI-driven wrapper over the science modules in `src/` (core, sim, calib): it
-runs the full pipeline (sweep -> NPE + conformal -> Contract-B artifact) with config, logging,
-a run manifest, and resumable per-stage artifacts.
-
-Non-destructive layout (Jul 8): the proven science still lives under `src/` and is imported via
-the path bootstrap below; the physical consolidation into `conduction_lens/{core,sim,calib}` is
-a follow-up once no long sweep is mid-flight.
+An installable, CLI-driven wrapper over the science modules in `src/` (core, sim, npe, calib): it
+runs the full pipeline (sweep -> NPE + conformal -> Contract-B artifact) with config, logging, a
+run manifest, and resumable per-stage artifacts. The science lives under `src/` as flat top-level
+packages, imported via the path bootstrap below in a source checkout.
 """
 
 from __future__ import annotations
