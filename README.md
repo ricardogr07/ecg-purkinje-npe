@@ -2,6 +2,9 @@
 
 **Calibrated, amortized identifiability of the Purkinje conduction system from the surface ECG.**
 
+[![CI](https://github.com/ricardogr07/ecg-purkinje-npe/actions/workflows/ci.yml/badge.svg)](https://github.com/ricardogr07/ecg-purkinje-npe/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
 We train an amortized Neural Posterior Estimator (`sbi`) over cardiac conduction parameters at fixed
 anatomy and report, with formal calibration, **which parts of the His-Purkinje conduction system a
 12-lead ECG can and cannot recover, at a stated observation-noise floor**. The contribution is a
@@ -9,6 +12,11 @@ scientific finding, not a new method. Everything is measured on a **simulated** 
 ECG in this project, and comparison against measured recordings is future work.
 
 Live demo: https://d2b1qd2pllzgje.cloudfront.net
+
+![Pipeline overview: conduction parameters and network topology run through the purkinje-uv and myocardial-mesh simulator to a 12-lead ECG, then an amortized NPE to a calibrated identifiability map](docs/images/architecture-01.svg)
+
+_Conduction parameters through the simulator and an amortized NPE to a calibrated identifiability
+map. Full walkthrough in [`docs/architecture.md`](docs/architecture.md)._
 
 ## The finding
 
