@@ -43,14 +43,35 @@ export default function HowItWorks() {
 
   return (
     <div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {STEPS.map((s) => (
-          <div key={s.n} className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
-            <div className="font-mono text-sm text-indigo-400">{s.n}</div>
-            <h3 className="mt-2 text-sm font-semibold text-zinc-100">{s.title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-400">{s.body}</p>
-          </div>
-        ))}
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        {/* the fixed anatomy and its grown Purkinje network (static paper figure) */}
+        <figure className="space-y-3">
+          <Card>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/figures/fig6_crtdemo_purkinje_dark.png"
+              width={1407}
+              height={765}
+              alt="The fixed crtdemo biventricular anatomy with a grown fractal Purkinje network overlaid on the endocardium."
+              className="h-auto w-full rounded-lg"
+            />
+          </Card>
+          <figcaption className="font-mono text-xs leading-relaxed text-zinc-500">
+            Figure 1. The fixed crtdemo anatomy and a grown Purkinje network; conduction parameters
+            flow through the simulator to a 12-lead ECG, then an amortized NPE to a calibrated
+            posterior.
+          </figcaption>
+        </figure>
+        {/* the four steps of the pipeline */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          {STEPS.map((s) => (
+            <div key={s.n} className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
+              <div className="font-mono text-sm text-indigo-400">{s.n}</div>
+              <h3 className="mt-2 text-sm font-semibold text-zinc-100">{s.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">{s.body}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       <p className="mt-12 text-xs font-mono uppercase tracking-widest text-zinc-500">
@@ -69,12 +90,13 @@ export default function HowItWorks() {
         </div>
         <div className="space-y-3">
           <ProvenanceChip kind={forwardKind} note={forwardNote} />
-          <Card title="Parameter recovery" hint="synthetic target vs posterior predictive">
+          <Card title="Forward 12-lead ECG" hint="synthetic target at the reference parameters">
             <EcgOverlay />
           </Card>
           <p className="text-xs leading-relaxed text-zinc-500">
-            Recovery of a synthetic target ECG at the recovered parameters. Amplitudes are arbitrary
-            units scaled to a stated mV operating point. This is not a comparison against a real ECG.
+            The forward-model 12-lead pseudo-ECG at the reference conduction parameters. Amplitudes are
+            arbitrary units scaled to a stated mV operating point. This is not a comparison against a
+            real ECG.
           </p>
         </div>
       </div>

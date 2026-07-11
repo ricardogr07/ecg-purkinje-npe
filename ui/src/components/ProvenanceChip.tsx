@@ -17,6 +17,10 @@ const TONES: Record<Provenance, string> = {
 };
 
 export default function ProvenanceChip({ kind, note }: { kind: Provenance; note?: string }) {
+  // Real/precomputed data needs no per-panel label: the honesty rule is only about
+  // never presenting MOCK as real. Stay silent for genuine data so the chip stops
+  // repeating "precomputed" on every panel, and auto-returns (amber) if is_mock flips.
+  if (kind === "real" || kind === "precomputed") return null;
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <span

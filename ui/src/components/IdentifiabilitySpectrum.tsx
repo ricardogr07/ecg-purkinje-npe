@@ -39,7 +39,7 @@ function Row({ s }: { s: ParamSummary }) {
   const barColor =
     ident.label === "resolved"
       ? "bg-emerald-400"
-      : ident.label === "partial"
+      : ident.label === "moderate"
         ? "bg-amber-400"
         : "bg-zinc-500";
 
@@ -87,14 +87,19 @@ function Row({ s }: { s: ParamSummary }) {
   );
 }
 
-export default function IdentifiabilitySpectrum() {
+export default function IdentifiabilitySpectrum({ compact = false }: { compact?: boolean } = {}) {
   const summaries = PARAM_ORDER.map(paramSummary).filter((s) => s.contraction !== undefined);
   if (!summaries.length) return <EmptyState label="No contraction spectrum in this run." />;
 
   const sorted = [...summaries].sort((a, b) => (a.contraction ?? 1) - (b.contraction ?? 1));
   const resolved = sorted[0];
-  const unresolved = sorted[sorted.length - 1];
-  const nResolved = summaries.filter((s) => (s.contraction ?? 1) <= 0.6).length;
+  const mostDiffuse = sorted[sorted.length - 1];
+  // Tier counts from the shared colormap so bars, row labels, and this header agree.
+  const tier = (c: number | undefined) => identifiabilityColor(c).label;
+  const nWell = summaries.filter((s) => tier(s.contraction) === "resolved").length;
+  const nMod = summaries.filter((s) => tier(s.contraction) === "moderate").length;
+  const nDiffuse = summaries.length - nWell - nMod;
+  const countLabel = `${nWell + nMod} of ${summaries.length} carry information (${nWell} well resolved, ${nMod} moderate); ${nDiffuse} diffuse`;
 
   // The noise floor travels with the claim, in the header (PROVENANCE rule 2).
   const nm = results.noise_model;
@@ -105,11 +110,31 @@ export default function IdentifiabilitySpectrum() {
         ? `${nm.sigma} mV`
         : null;
 
+  // Compact teaser (hero): the bars are the proof, no framing cards or footer.
+  // The floor is not repeated here (the hero subhead says "at a stated noise
+  // floor"); the number travels with the full finding in section 04.
+  if (compact) {
+    return (
+      <div>
+        <div className="border-b border-zinc-800 pb-3">
+          <h2 className="text-sm font-semibold text-zinc-200">
+            Identifiability spectrum: {countLabel}
+          </h2>
+        </div>
+        <div className="mt-4">
+          {sorted.map((s) => (
+            <Row key={s.key} s={s} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-zinc-800 pb-3">
         <h2 className="text-sm font-semibold text-zinc-200">
-          Identifiability spectrum: {nResolved} of {summaries.length} parameters resolved
+          Identifiability spectrum: {countLabel}
         </h2>
         {noiseFloor ? (
           <p className="font-mono text-xs text-zinc-400">at a noise floor of {noiseFloor}</p>
@@ -141,18 +166,18 @@ export default function IdentifiabilitySpectrum() {
           <span className="inline-flex items-center rounded-full border border-zinc-600 px-2.5 py-0.5 text-xs font-mono text-zinc-400">
             not resolved at this noise floor
           </span>
-          <div className="mt-3 font-mono text-2xl text-zinc-200">{unresolved.meta.alias}</div>
-          <p className="mt-1 text-sm text-zinc-300">{unresolved.meta.label}</p>
+          <div className="mt-3 font-mono text-2xl text-zinc-200">{mostDiffuse.meta.alias}</div>
+          <p className="mt-1 text-sm text-zinc-300">{mostDiffuse.meta.label}</p>
           <p className="mt-3 text-sm text-zinc-400">
             The posterior still spans{" "}
             <span className="font-mono text-zinc-200">
-              {fmt(unresolved.ci90?.[0], unresolved.meta.unit)} to{" "}
-              {fmt(unresolved.ci90?.[1], unresolved.meta.unit)}{" "}
-              {unresolved.meta.unit === "-" ? "" : unresolved.meta.unit}
+              {fmt(mostDiffuse.ci90?.[0], mostDiffuse.meta.unit)} to{" "}
+              {fmt(mostDiffuse.ci90?.[1], mostDiffuse.meta.unit)}{" "}
+              {mostDiffuse.meta.unit === "-" ? "" : mostDiffuse.meta.unit}
             </span>
             , keeping{" "}
             <span className="font-mono text-zinc-200">
-              {Math.round((unresolved.contraction ?? 0) * 100)}%
+              {Math.round((mostDiffuse.contraction ?? 0) * 100)}%
             </span>{" "}
             of the prior. Any single value read off an ECG fit for it is a prior belief, not a
             measurement.
@@ -168,7 +193,7 @@ export default function IdentifiabilitySpectrum() {
       <p className="mt-4 text-xs text-zinc-500">
         Contraction = posterior std / prior std, per parameter. Lower is better resolved. Bars show
         the posterior 90% interval inside the prior range; the amber tick is the synthetic truth.
-        Resolved and unresolved are stated at the noise floor above, not in the absolute.
+        Resolved, moderate and diffuse are stated at the noise floor above, not in the absolute.
       </p>
     </div>
   );

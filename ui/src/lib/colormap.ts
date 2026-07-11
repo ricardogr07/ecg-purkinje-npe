@@ -38,19 +38,20 @@ export function rgb([r, g, b]: [number, number, number], alpha = 1): string {
 }
 
 // Identifiability -> semantic color, at a stated noise floor. Low contraction =
-// resolved (emerald), mid = partial (amber), high = unresolved (grey). A parameter
-// is unresolved at THIS noise floor and may resolve at a lower one, never a claim
-// about the absolute. Thresholds are the spectrum's meaning: change only via a
-// DECISIONS entry (docs PROVENANCE.md, colormap thresholds).
+// resolved (emerald), mid = moderate (amber), high = diffuse (grey). A parameter
+// is diffuse at THIS noise floor and may resolve at a lower one, never a claim
+// about the absolute. Tiers match the paper (well resolved / moderate / diffuse);
+// the boundaries (0.5, 0.85) are the spectrum's meaning and are recorded in
+// docs/verification-ledger.md.
 export function identifiabilityColor(contraction: number | undefined): {
   cls: string;
   hex: string;
-  label: "resolved" | "partial" | "unresolved";
+  label: "resolved" | "moderate" | "diffuse";
 } {
   if (contraction === undefined || Number.isNaN(contraction)) {
-    return { cls: "text-zinc-400", hex: "#a1a1aa", label: "partial" };
+    return { cls: "text-zinc-400", hex: "#a1a1aa", label: "moderate" };
   }
-  if (contraction <= 0.45) return { cls: "text-emerald-400", hex: "#34d399", label: "resolved" };
-  if (contraction <= 0.6) return { cls: "text-amber-400", hex: "#fbbf24", label: "partial" };
-  return { cls: "text-zinc-400", hex: "#a1a1aa", label: "unresolved" };
+  if (contraction < 0.5) return { cls: "text-emerald-400", hex: "#34d399", label: "resolved" };
+  if (contraction < 0.85) return { cls: "text-amber-400", hex: "#fbbf24", label: "moderate" };
+  return { cls: "text-zinc-400", hex: "#a1a1aa", label: "diffuse" };
 }

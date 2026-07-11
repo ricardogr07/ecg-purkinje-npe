@@ -18,6 +18,36 @@ function normalize(v: number[]): [number, number, number] {
   return [v[0] / n, v[1] / n, v[2] / n];
 }
 
+// Small pill toggle for a render layer. Active = filled in the layer's colour.
+function LayerBtn({
+  active,
+  tone = "zinc",
+  onClick,
+  children,
+}: {
+  active: boolean;
+  tone?: "zinc" | "cyan" | "amber";
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  const onCls = {
+    zinc: "border-zinc-500 bg-zinc-700/40 text-zinc-100",
+    cyan: "border-cyan-500/60 bg-cyan-500/15 text-cyan-200",
+    amber: "border-amber-500/60 bg-amber-500/15 text-amber-200",
+  }[tone];
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={active}
+      className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
+        active ? onCls : "border-zinc-700 text-zinc-500 hover:text-zinc-300"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 type ActivationMapProps = { geometry?: Geometry; results?: ResultsArtifact };
 
 // Defaults to the baked global artifact (crtdemo); pass geometry/results to render a second
@@ -27,27 +57,35 @@ export default function ActivationMap({ geometry: geometryProp, results: results
   const geometry = geometryProp ?? art.geometry;
   const results = resultsProp ?? art.results;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const angleRef = useRef(0.5); // azimuth (orbit about the long axis)
-  const elevRef = useRef(1.32); // elevation (view tilt), long axis roughly vertical
+  const angleRef = useRef(0.5); // azimuth (orbit about the long axis), damped toward the target
+  const elevRef = useRef(1.32); // elevation (view tilt), damped toward the target
+  const targetAzRef = useRef(0.5); // orbit target: drag and auto-orbit move this, the camera eases to it
+  const targetPolRef = useRef(1.32); // polar/elevation target (clamped away from the poles)
+  const lastTimeRef = useRef(0); // last frame timestamp, for frame-rate-independent damping
   const zoomRef = useRef(1); // wheel zoom multiplier
   const sweepRef = useRef(1); // 1 = fully activated (whole map shown)
   const playingRef = useRef(false);
   const rotatingRef = useRef(false); // auto-orbit defaults to PAUSED (D-07)
   const draggingRef = useRef(false);
   const lastPointer = useRef<{ x: number; y: number } | null>(null);
+  const panRef = useRef({ x: 0, y: 0 }); // screen-space pan offset
+  const panningRef = useRef(false);
   const [playing, setPlaying] = useState(false);
   const [rotating, setRotating] = useState(false);
   const [sweepPct, setSweepPct] = useState(100);
-  const [showPk, setShowPk] = useState(true);
-  const showPkRef = useRef(true);
+  const [layers, setLayers] = useState({ surface: true, lv: true, rv: true });
+  const surfRef = useRef(true);
+  const lvRef = useRef(true);
+  const rvRef = useRef(true);
 
   const verts = geometry?.vertices;
   const faces = geometry?.faces;
   const lat = results.activation_map?.values;
   const chamber = geometry?.chamber;
-  // The Strocchi demo ships the myocardial surface + activation map only (no Purkinje tree):
-  // the network is grown (F5, LV 44 / RV 138 PMJs) but sparser than crtdemo's 87 / 166, so this
-  // is a method-generality figure, not an anatomically faithful tree render. Suppress the tree.
+  // The Strocchi demo ships the myocardial surface + activation map only: the Purkinje tree
+  // geometry is not bundled for these hearts (PMJ counts live in the results meta, the node/edge
+  // geometry does not), so this is a method-generality figure, not an anatomically faithful tree
+  // render. Suppress the tree.
   const isStrocchi = (geometry?.geometry_id ?? "").toLowerCase().includes("strocchi");
   const purk = isStrocchi ? undefined : geometry?.purkinje;
 
@@ -150,9 +188,11 @@ export default function ActivationMap({ geometry: geometryProp, results: results
       const st = Math.sin(elevRef.current);
       const ctil = Math.cos(elevRef.current);
       const fit = ((Math.min(w, h) * 0.42) / radius) * zoomRef.current;
-      const ox = w / 2;
-      const oy = h / 2;
+      const ox = w / 2 + panRef.current.x;
+      const oy = h / 2 + panRef.current.y;
 
+      // Surface layer (toggle): transform vertices, depth-sort faces, paint by LAT.
+      if (surfRef.current) {
       // transform vertices: spin about long axis (z), then view tilt about x.
       for (let i = 0; i < V.length; i++) {
         const px = V[i][0] - cx;
@@ -231,10 +271,11 @@ export default function ActivationMap({ geometry: geometryProp, results: results
         ctx.closePath();
         ctx.fill();
       }
+      }
 
       // Purkinje network overlay: project the tree nodes with the same transform, draw the edges
       // with a depth fade (front branches brighter). LV cyan, RV amber.
-      if (showPkRef.current && pkEdges.length) {
+      if ((lvRef.current || rvRef.current) && pkEdges.length) {
         for (let i = 0; i < pkNodes.length; i++) {
           const px = pkNodes[i][0] - cx;
           const py = pkNodes[i][1] - cy;
@@ -249,6 +290,7 @@ export default function ActivationMap({ geometry: geometryProp, results: results
         }
         ctx.lineWidth = 1;
         for (let e = 0; e < pkEdges.length; e++) {
+          if (pkRv[e] ? !rvRef.current : !lvRef.current) continue;
           const [a, b] = pkEdges[e];
           const depth = Math.max(0, Math.min(1, ((pkz[a] + pkz[b]) / 2 + radius) / (2 * radius)));
           const alpha = 0.12 + 0.65 * depth;
@@ -269,9 +311,18 @@ export default function ActivationMap({ geometry: geometryProp, results: results
         rotatingRef.current = false;
         setRotating(false);
       }
-      if (rotatingRef.current) angleRef.current += 0.006;
+      // Frame-rate independent damping: dt in 60fps-frame units, clamped so a long
+      // stall (tab backgrounded) cannot snap the camera. Auto-orbit nudges the target;
+      // the live camera eases toward it, which removes the drag jitter and coasts out.
+      const now = performance.now();
+      const dt = lastTimeRef.current ? Math.min(3, (now - lastTimeRef.current) / 16.667) : 1;
+      lastTimeRef.current = now;
+      if (rotatingRef.current) targetAzRef.current += 0.006 * dt;
+      const k = 1 - Math.pow(1 - 0.2, dt);
+      angleRef.current += (targetAzRef.current - angleRef.current) * k;
+      elevRef.current += (targetPolRef.current - elevRef.current) * k;
       if (playingRef.current) {
-        sweepRef.current += 0.006;
+        sweepRef.current += 0.006 * dt;
         if (sweepRef.current >= 1) {
           sweepRef.current = 1;
           playingRef.current = false;
@@ -330,15 +381,29 @@ export default function ActivationMap({ geometry: geometryProp, results: results
     rotatingRef.current = !rotatingRef.current;
     setRotating(rotatingRef.current);
   }
-  function togglePk() {
-    showPkRef.current = !showPkRef.current;
-    setShowPk(showPkRef.current);
+  function zoomBy(factor: number) {
+    zoomRef.current = Math.max(0.4, Math.min(5, zoomRef.current * factor));
+  }
+  function resetView() {
+    angleRef.current = 0.5;
+    elevRef.current = 1.32;
+    targetAzRef.current = 0.5;
+    targetPolRef.current = 1.32;
+    zoomRef.current = 1;
+    panRef.current = { x: 0, y: 0 };
+  }
+  function toggleLayer(key: "surface" | "lv" | "rv") {
+    const ref = key === "surface" ? surfRef : key === "lv" ? lvRef : rvRef;
+    ref.current = !ref.current;
+    setLayers((s) => ({ ...s, [key]: ref.current }));
   }
 
   // Orbit by pointer drag: horizontal -> azimuth, vertical -> elevation. Grabbing
   // the map pauses the auto-orbit so it holds still while you study it.
   function onPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
     draggingRef.current = true;
+    // Shift-drag or right/middle button pans; plain left-drag orbits.
+    panningRef.current = e.shiftKey || e.button === 1 || e.button === 2;
     lastPointer.current = { x: e.clientX, y: e.clientY };
     e.currentTarget.setPointerCapture?.(e.pointerId);
     if (rotatingRef.current) {
@@ -351,8 +416,14 @@ export default function ActivationMap({ geometry: geometryProp, results: results
     const dx = e.clientX - lastPointer.current.x;
     const dy = e.clientY - lastPointer.current.y;
     lastPointer.current = { x: e.clientX, y: e.clientY };
-    angleRef.current += dx * 0.01;
-    elevRef.current = Math.max(0.25, Math.min(Math.PI - 0.25, elevRef.current + dy * 0.01));
+    if (panningRef.current) {
+      panRef.current = { x: panRef.current.x + dx, y: panRef.current.y + dy };
+    } else {
+      // Drag moves the damped orbit TARGET (slower, frame-rate independent via the ease
+      // in tick); polar is clamped ~15 to 165 deg so the model cannot flip over the poles.
+      targetAzRef.current += dx * 0.005;
+      targetPolRef.current = Math.max(0.26, Math.min(Math.PI - 0.26, targetPolRef.current + dy * 0.005));
+    }
   }
   function onPointerUp(e: React.PointerEvent<HTMLCanvasElement>) {
     draggingRef.current = false;
@@ -370,11 +441,12 @@ export default function ActivationMap({ geometry: geometryProp, results: results
           ref={canvasRef}
           className="w-full h-full touch-none cursor-grab active:cursor-grabbing"
           role="img"
-          aria-label="Biventricular surface colored by local activation time. Drag to orbit (azimuth and elevation), scroll to zoom, and play the wavefront sweep to reveal the depolarization order."
+          aria-label="Biventricular surface colored by local activation time. Drag to orbit, shift-drag or right-drag to pan, scroll or the zoom buttons to zoom, and play the wavefront sweep to reveal the depolarization order."
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerLeave={onPointerUp}
+          onContextMenu={(e) => e.preventDefault()}
         />
         {hasLat ? (
           <div className="absolute top-2 left-2 rounded-md bg-black/40 px-2 py-1 font-mono text-[10px] text-zinc-300">
@@ -388,9 +460,9 @@ export default function ActivationMap({ geometry: geometryProp, results: results
       </div>
 
       {/* controls */}
-      <div className="mt-3 flex flex-wrap items-center gap-3">
+      <div className="mt-3 space-y-2">
         {hasLat ? (
-          <>
+          <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={playing ? pauseSweep : playSweep}
               className="rounded-lg border border-indigo-500/50 bg-indigo-500/10 px-3 py-1.5 text-sm font-medium text-indigo-200 hover:bg-indigo-500/20"
@@ -409,25 +481,56 @@ export default function ActivationMap({ geometry: geometryProp, results: results
                 aria-label="Activation-time sweep"
               />
             </label>
-          </>
+          </div>
         ) : null}
-        <button
-          onClick={toggleRotate}
-          className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800"
-          aria-pressed={rotating}
-        >
-          {rotating ? "Pause auto-orbit" : "Auto-orbit"}
-        </button>
-        <span className="text-[11px] text-zinc-500">drag to orbit, scroll to zoom</span>
-        {purk ? (
+
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={togglePk}
+            onClick={toggleRotate}
             className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800"
-            aria-pressed={showPk}
+            aria-pressed={rotating}
           >
-            {showPk ? "Hide Purkinje" : "Show Purkinje"}
+            {rotating ? "Pause auto-orbit" : "Auto-orbit"}
           </button>
-        ) : null}
+          <button
+            onClick={() => zoomBy(1 / 1.25)}
+            className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800"
+            aria-label="Zoom out"
+          >
+            Zoom -
+          </button>
+          <button
+            onClick={() => zoomBy(1.25)}
+            className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800"
+            aria-label="Zoom in"
+          >
+            Zoom +
+          </button>
+          <button
+            onClick={resetView}
+            className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800"
+          >
+            Reset view
+          </button>
+          <span className="text-[11px] text-zinc-500">drag orbit, shift-drag pan, scroll zoom</span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">layers</span>
+          <LayerBtn active={layers.surface} onClick={() => toggleLayer("surface")}>
+            Surface
+          </LayerBtn>
+          {purk ? (
+            <>
+              <LayerBtn active={layers.lv} tone="cyan" onClick={() => toggleLayer("lv")}>
+                LV Purkinje
+              </LayerBtn>
+              <LayerBtn active={layers.rv} tone="amber" onClick={() => toggleLayer("rv")}>
+                RV Purkinje
+              </LayerBtn>
+            </>
+          ) : null}
+        </div>
       </div>
 
       {purk ? (
@@ -438,9 +541,9 @@ export default function ActivationMap({ geometry: geometryProp, results: results
           {(purk.lv.n_pmj ?? 0) + (purk.rv.n_pmj ?? 0)} Purkinje-muscle junctions).
         </p>
       ) : isStrocchi ? (
-        <p className="mt-2 text-[11px] text-amber-300">
-          Strocchi endocardial surface repair pending: showing the myocardial surface and activation
-          map with no Purkinje tree.
+        <p className="mt-2 text-[11px] text-zinc-500">
+          Myocardial surface and activation map only; the Purkinje tree geometry is not bundled for
+          this heart.
         </p>
       ) : null}
 

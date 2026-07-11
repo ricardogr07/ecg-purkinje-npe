@@ -4,28 +4,33 @@ import type { ReactNode } from "react";
 
 export function Section({
   id,
+  number,
   eyebrow,
   title,
   lead,
   children,
 }: {
   id?: string;
+  number?: string;
   eyebrow?: string;
   title: string;
   lead?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section id={id} className="border-t border-zinc-800/80 py-14 sm:py-20 scroll-mt-28">
+    <section id={id} className="border-t border-zinc-800/80 py-16 sm:py-24 scroll-mt-20">
       <div className="max-w-6xl mx-auto px-4">
-        <div className="max-w-3xl">
+        <div>
           {eyebrow ? (
-            <p className="text-xs font-mono uppercase tracking-widest text-indigo-400 mb-2">
+            <p className="text-xs font-mono uppercase tracking-widest text-indigo-400 mb-3">
+              {number ? <span className="text-zinc-500">{number} / </span> : null}
               {eyebrow}
             </p>
           ) : null}
-          <h2 className="text-2xl sm:text-3xl font-bold text-zinc-50 tracking-tight">{title}</h2>
-          {lead ? <p className="mt-3 text-zinc-400 leading-relaxed">{lead}</p> : null}
+          <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-zinc-50 tracking-tight">
+            {title}
+          </h2>
+          {lead ? <p className="mt-4 text-lg text-zinc-400 leading-relaxed">{lead}</p> : null}
         </div>
         <div className="mt-8">{children}</div>
       </div>

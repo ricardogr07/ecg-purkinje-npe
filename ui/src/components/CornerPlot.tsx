@@ -14,17 +14,17 @@ import { EmptyState } from "@/components/Layout";
 
 // Corner matrix over the 7 parameters. Lower triangle: pairwise posterior
 // scatter. Diagonal: marginal histogram, colored by identifiability, with the
-// synthetic-truth marker. Upper triangle: correlation heat. The cv <-> init_length_lv
-// pair is highlighted as the clearest correlated-but-identifiable case: the ECG
-// constrains the combination tightly while leaving each one looser. It is a
-// correlation, not a failure to resolve.
+// synthetic-truth marker. Upper triangle: correlation heat. The delta_iv <-> init_length_rv
+// pair is highlighted as the strongest correlation where both parameters are
+// individually identifiable (rho about -0.38): the ECG constrains the combination
+// more tightly than either alone. It is a correlation, not a failure to resolve.
 
 const CELL = 76;
 const GUT = 42;
 const PAD = 6;
 const MAX_PTS = 220;
 
-const RIDGE: [ParamKey, ParamKey] = ["cv", "init_length_lv"];
+const RIDGE: [ParamKey, ParamKey] = ["delta_iv", "init_length_rv"];
 
 function heat(r: number): string {
   // -1 (blue) .. 0 (transparent) .. +1 (red)
@@ -103,7 +103,7 @@ export default function CornerPlot() {
   }
 
   return (
-    <figure aria-label="Posterior corner plot over 7 conduction parameters, highlighting the cv to init_length_lv pair as correlated but identifiable">
+    <figure aria-label="Posterior corner plot over 7 conduction parameters, highlighting the delta_iv to init_length_rv pair as correlated but identifiable">
       <div className="overflow-x-auto">
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[520px] max-w-3xl" role="img">
           {PARAM_ORDER.map((_, row) =>
@@ -240,7 +240,7 @@ export default function CornerPlot() {
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-2.5 rounded-sm border border-amber-400 bg-amber-400/10" />{" "}
-          cv to L0_LV pair (corr {corr[ridgeI][ridgeJ].toFixed(2)}), correlated but identifiable
+          dIV to L0_RV pair (corr {corr[ridgeI][ridgeJ].toFixed(2)}), correlated but identifiable
         </span>
         <span className="text-zinc-600">upper cells: Pearson correlation (red +, blue -)</span>
       </figcaption>

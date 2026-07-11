@@ -14,6 +14,10 @@
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+  /* Serif display face for section titles and the hero, to read like a manuscript.
+     System stack (Georgia is an editorial screen serif present on all target machines),
+     so no web font is loaded and the static export needs no network. */
+  --font-serif: Georgia, "Times New Roman", ui-serif, serif;
 }
 
 html {
@@ -25,6 +29,12 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Justify body copy. Multi-line paragraphs and list items only; single-line text
+   is unaffected because justify never stretches the last line of a block. */
+main :where(p, li) {
+  text-align: justify;
 }
 
 /* Accessibility: visible focus rings on interactive elements. */

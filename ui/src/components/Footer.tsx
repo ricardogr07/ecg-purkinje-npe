@@ -29,7 +29,7 @@ const LINKS = [
 export default function Footer() {
   return (
     <footer className="border-t border-zinc-800 py-12">
-      <div className="mx-auto max-w-6xl px-4">
+      <div className="mx-auto max-w-6xl px-4 text-center">
         <p className="text-sm text-zinc-300">
           <span className="font-semibold text-zinc-100">ECG to Purkinje</span> · Calibrated
           identifiability of the conduction system from the surface ECG
@@ -45,7 +45,7 @@ export default function Footer() {
         </p>
         <p className="mt-1 text-sm text-zinc-400">Built by Ricardo García Ramírez</p>
 
-        <div className="mt-4 flex items-center gap-4">
+        <div className="mt-4 flex items-center justify-center gap-4">
           {LINKS.map((l) => (
             <a
               key={l.label}

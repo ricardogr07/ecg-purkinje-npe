@@ -1,15 +1,14 @@
+import type { ReactNode } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Section, Card } from "@/components/Layout";
 import ProvenanceChip, { type Provenance } from "@/components/ProvenanceChip";
-import Pending from "@/components/Pending";
 import Hero from "@/components/Hero";
 import IdentifiabilitySpectrum from "@/components/IdentifiabilitySpectrum";
 import WhyItMatters from "@/components/WhyItMatters";
 import HowItWorks from "@/components/HowItWorks";
 import CalibrationPanel from "@/components/CalibrationPanel";
 import CornerPlot from "@/components/CornerPlot";
-import WhatWeGotWrong from "@/components/WhatWeGotWrong";
 import WhatThisIsNot from "@/components/WhatThisIsNot";
 import Reproduce from "@/components/Reproduce";
 import ActivationMap from "@/components/ActivationMap";
@@ -20,10 +19,16 @@ import strocchiResults from "@mock/results.strocchi.json";
 import strocchiGeometry02 from "@mock/geometry.strocchi_02.json";
 import strocchiResults02 from "@mock/results.strocchi_02.json";
 
-// Spine order (argumentative, not workflow): finding first, then why it matters,
-// how it works, is the uncertainty honest, the one correlated case, what we got
-// wrong, the limits, reproduce, and the conditional real heart. See the demo
-// brief and DESIGN_SPEC. Provenance is per section via chips, never a page banner.
+// Spine order follows the paper's arc (argumentative, not workflow): the question
+// and its proof, why it matters, the heart and the pipeline, the finding in full,
+// is the uncertainty honest, the one correlated case, the limits, the pipeline
+// generalizes, reproduce. Provenance is per section via chips, never a page banner.
+// Connective lines hand off between sections; copy owned by Cowork.
+
+// A short connective sentence that hands off to the next section.
+function Connective({ children }: { children: ReactNode }) {
+  return <p className="mt-10 text-base leading-relaxed text-zinc-400">{children}</p>;
+}
 
 export default function Home() {
   // Data-driven provenance: the posterior-derived panels are the honest 7D run
@@ -46,64 +51,94 @@ export default function Home() {
     <>
       <Header />
       <main id="main" className="flex-1">
-        {/* 1. finding: the hero + the spectrum */}
-        <section id="finding" className="scroll-mt-28 border-b border-zinc-800">
+        {/* 01. the question: the hero + the spectrum as proof */}
+        <section id="finding" className="scroll-mt-20 border-b border-zinc-800">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
-            <ProvenanceChip kind={posteriorKind} note={spectrumNote} />
-            <div className="mt-5">
-              <Hero />
-            </div>
+            <p className="mb-4 text-xs font-mono uppercase tracking-widest text-indigo-400">
+              <span className="text-zinc-500">01 / </span>the question
+            </p>
+            <Hero />
             <div className="mt-12">
-              <IdentifiabilitySpectrum />
+              <ProvenanceChip kind={posteriorKind} note={spectrumNote} />
+              <div className="mt-4">
+                <IdentifiabilitySpectrum compact />
+              </div>
             </div>
-            <div className="mt-8 max-w-2xl">
-              <Pending
-                label="Colouring the bars by CRLB"
-                reason="The bars are coloured by contraction today. Once the Fisher information (CRLB) Jacobian lands, colour will come from CRLB so the bars do not shift when a prior is retuned. The printed contraction number stays as is."
-                falsify="If CRLB and contraction disagree on which parameters are resolved, the spectrum ordering is not robust and needs a rethink."
-              />
-            </div>
+            <Connective>
+              Before trusting any of those numbers, two questions: does it matter, and is the
+              uncertainty honest.
+            </Connective>
           </div>
         </section>
 
-        {/* 2. why it matters */}
+        {/* 02. why it matters */}
         <Section
           id="why"
+          number="02"
           eyebrow="why it matters"
           title="The ECG resolves the parameter clinicians actually use"
         >
           <WhyItMatters />
+          <Connective>
+            That is the stake. Here is the machine that turns a heart into an ECG, and the ECG back
+            into a distribution over parameters.
+          </Connective>
         </Section>
 
-        {/* 3. how it works */}
+        {/* 03. the heart and the pipeline */}
         <Section
           id="how"
-          eyebrow="how it works"
-          title="Simulate many hearts, learn to invert, check the confidence is honest"
-          lead="Four steps. This is the only technical section, and it reads without any prior knowledge of neural networks."
+          number="03"
+          eyebrow="the heart and the pipeline"
+          title="The heart, and the pipeline that inverts it"
+          lead="The anatomy is fixed. Conduction parameters flow through the simulator to a 12-lead ECG; an amortized posterior estimator inverts it. Four steps, no neural-network background needed."
         >
           <HowItWorks />
+          <Connective>
+            Run that pipeline across the prior and read off, parameter by parameter, how much the ECG
+            actually narrows.
+          </Connective>
         </Section>
 
-        {/* 4. is the uncertainty honest? */}
+        {/* 04. the finding, in full */}
+        <Section
+          id="spectrum"
+          number="04"
+          eyebrow="the finding, in full"
+          title="Four of seven parameters carry information"
+          lead="At the waveform floor (sigma 0.025 mV per sample per lead) the ordering is clear. Interventricular delay (contraction about 0.15) and myocardial velocity (about 0.35) are well constrained; RV initial extent (about 0.63) and conduction velocity (about 0.67) are moderate; LV extent, branch angle and branch repulsivity stay diffuse (about 1.0 to 1.2), no tighter than the prior."
+        >
+          <div className="space-y-6">
+            <ProvenanceChip kind={posteriorKind} note={spectrumNote} />
+            <IdentifiabilitySpectrum />
+          </div>
+        </Section>
+
+        {/* 05. is the uncertainty honest? */}
         <Section
           id="calibration"
+          number="05"
           eyebrow="is the uncertainty honest?"
           title="Calibrated, so the intervals mean what they say"
-          lead="An identifiability claim is only as good as its calibration. Simulation based calibration checks, one parameter at a time, whether the posterior intervals are honest. Toggle conformal recalibration and watch the ranks flatten."
+          lead="An identifiability claim is only as good as its calibration. The raw posterior was overconfident; per-parameter conformal recalibration flattens the simulation based calibration ranks and brings the joint coverage to the diagonal. Toggle before and after."
         >
           <div className="space-y-4">
             <ProvenanceChip kind={posteriorKind} note={calibrationNote} />
             <CalibrationPanel />
           </div>
+          <Connective>
+            Calibrated marginals still hide how parameters trade off against each other. One pair
+            shows it clearly.
+          </Connective>
         </Section>
 
-        {/* 5. the correlated pair */}
+        {/* 06. the correlated pair */}
         <Section
           id="correlation"
+          number="06"
           eyebrow="the correlated pair"
           title="Correlated, but still identifiable"
-          lead="Some parameters trade off against each other and the ECG constrains their combination tightly while leaving each one looser. That is correlation, not a failure to resolve."
+          lead="Interventricular delay and RV initial extent trade off against each other: the ECG constrains their combination more tightly than either alone, while leaving each one looser. That is correlation, not a failure to resolve."
         >
           <div className="space-y-4">
             <ProvenanceChip kind={posteriorKind} note={cornerNote} />
@@ -123,8 +158,9 @@ export default function Home() {
                       A tilted cloud means the pair is correlated.
                     </li>
                     <li>
-                      <span className="font-mono text-amber-300">The amber cell</span>: the cv to
-                      L0_LV pair, the clearest correlated but identifiable case.
+                      <span className="font-mono text-amber-300">The amber cell</span>: the dIV to
+                      L0_RV pair, the strongest correlation where both parameters are still
+                      individually identifiable.
                     </li>
                     <li>
                       <span className="font-mono text-zinc-200">Upper cells</span>: correlation
@@ -144,62 +180,51 @@ export default function Home() {
           </div>
         </Section>
 
-        {/* 6. what we got wrong */}
-        <Section
-          id="corrections"
-          eyebrow="what we got wrong"
-          title="Four things we believed, and what changed our minds"
-          lead="This is the most persuasive part of the page. It sits below the calibration section because you need to know what calibration is before you can see what it caught. The formal ledger lives in the paper."
-        >
-          <WhatWeGotWrong />
-        </Section>
-
-        {/* 7. what this is not */}
-        <Section id="limits" eyebrow="what this is not" title="Read this before you cite it">
+        {/* 07. limitations */}
+        <Section id="limits" number="07" eyebrow="limitations" title="Limitations">
           <WhatThisIsNot />
         </Section>
 
-        {/* 8. reproduce it */}
-        <Section
-          id="reproduce"
-          eyebrow="reproduce it"
-          title="Everything you need to run it yourself"
-          lead="The finding is a static export from a named run. The code, the weights, and the environment are open."
-        >
-          <Reproduce />
-        </Section>
-
-        {/* 9. the real heart: method generalizes to public Strocchi anatomy (no finding claimed) */}
+        {/* 08. the pipeline generalizes to public Strocchi anatomy (no finding claimed) */}
         <Section
           id="generalize"
-          eyebrow="the real heart"
+          number="08"
+          eyebrow="the pipeline generalizes"
           title="The pipeline generalizes"
           lead="The same steps run on multiple public anatomies. This is a claim about the method, not a second result."
         >
           <div className="space-y-4">
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="space-y-2">
+                <ProvenanceChip
+                  kind={strocchiResults.meta?.is_mock ? "illustrative" : "precomputed"}
+                  note="Strocchi method-generality panel"
+                />
                 <ActivationMap
                   geometry={strocchiGeometry as unknown as Geometry}
                   results={strocchiResults as unknown as ResultsArtifact}
                 />
-                <p className="text-xs text-zinc-500">
-                  Strocchi heart 01: Purkinje network LV {strocchiResults.meta.lv_pmj} / RV{" "}
-                  {strocchiResults.meta.rv_pmj} PMJs.
+                <p className="font-mono text-xs text-zinc-500">
+                  Figure 2. Strocchi heart 01: LV {strocchiResults.meta.lv_pmj} / RV{" "}
+                  {strocchiResults.meta.rv_pmj} Purkinje-muscle junctions (from metadata).
                 </p>
               </div>
               <div className="space-y-2">
+                <ProvenanceChip
+                  kind={strocchiResults02.meta?.is_mock ? "illustrative" : "precomputed"}
+                  note="Strocchi method-generality panel"
+                />
                 <ActivationMap
                   geometry={strocchiGeometry02 as unknown as Geometry}
                   results={strocchiResults02 as unknown as ResultsArtifact}
                 />
-                <p className="text-xs text-zinc-500">
-                  Strocchi heart 02: LV {strocchiResults02.meta.lv_pmj} / RV{" "}
-                  {strocchiResults02.meta.rv_pmj} PMJs.
+                <p className="font-mono text-xs text-zinc-500">
+                  Figure 3. Strocchi heart 02: LV {strocchiResults02.meta.lv_pmj} / RV{" "}
+                  {strocchiResults02.meta.rv_pmj} Purkinje-muscle junctions (from metadata).
                 </p>
               </div>
             </div>
-            <p className="max-w-2xl text-sm text-zinc-400">
+            <p className="text-sm text-zinc-400">
               The pipeline ingests public CC-BY-4.0 four-chamber meshes (Strocchi et al., PLoS ONE
               2020), derives each endocardium from the mesh&apos;s own universal ventricular
               coordinates, grows a Purkinje network, places electrodes from the heart&apos;s own axes,
@@ -208,6 +233,20 @@ export default function Home() {
               counts are 87 and 166 for reference).
             </p>
           </div>
+          <Connective>
+            Everything above is a static export from a named run. Here is how to reproduce it.
+          </Connective>
+        </Section>
+
+        {/* 09. reproduce and read the paper */}
+        <Section
+          id="reproduce"
+          number="09"
+          eyebrow="reproduce and read the paper"
+          title="Everything you need to run it yourself"
+          lead="The finding is a static export from a named run. The code, the weights, and the environment are open."
+        >
+          <Reproduce />
         </Section>
       </main>
       <Footer />

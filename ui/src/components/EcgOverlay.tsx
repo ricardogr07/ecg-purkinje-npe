@@ -67,7 +67,9 @@ export default function EcgOverlay() {
     PANEL_H / 2 - (v / scale.yMax) * (PANEL_H / 2 - PAD_Y);
 
   const hasBand = !!(pp?.band_lo?.length && pp?.band_hi?.length);
-  const hasMean = !!pp?.signal?.length;
+  // A stub predictive (e.g. a 12 x 2 placeholder) is treated as absent: only draw the
+  // posterior-predictive overlay when it spans at least as many samples as the target.
+  const hasMean = !!(pp?.signal?.length && (pp.signal[0]?.length ?? 0) >= T);
 
   return (
     <div>
@@ -81,7 +83,7 @@ export default function EcgOverlay() {
             <figure
               key={leads[li]}
               className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-1"
-              aria-label={`Lead ${leads[li]} synthetic target ECG with posterior-predictive band`}
+              aria-label={`Lead ${leads[li]} synthetic target ECG${hasMean ? " with posterior-predictive overlay" : ""}`}
             >
               <svg viewBox={`0 0 ${PANEL_W} ${PANEL_H}`} className="w-full h-auto">
                 {/* baseline */}

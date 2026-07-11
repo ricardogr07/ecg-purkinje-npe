@@ -22,6 +22,7 @@ Every row carries a stable ID `L-B{batch}-{nn}`, assigned in batch-then-row orde
 
 - **Batch-5 consolidation (this file).** Merged the four per-batch ledgers (verification_ledger_P0P1.md, verification_ledger_batch2.md, verification_ledger_batch3.md, verification_ledger_batch4.md) into one public document. Retrofitted stable `L-B{batch}-{nn}` IDs to all 114 pre-existing rows (Batch 4 shipped without any IDs; Batches 1 to 3 had none either). Each row's Claim, Source checked, and Result text and its status word are preserved verbatim; the only change is the added leftmost ID column. Added a `Batch 5 verifications` section with two new source-verifications: the TARP / Lemos 2023 ATC sign convention (L-B5-01) and the Rijnbeek 2014 per-lead R/S-wave percentiles (L-B5-02).
 - No em-dashes or en-dashes anywhere (house style); verified in-kernel before saving.
+- **UI display tiers (demo).** The identifiability spectrum sorts contraction into three display tiers: resolved < 0.5, moderate in [0.5, 0.85), diffuse >= 0.85 (ui/src/lib/colormap.ts). These boundaries are a presentation choice tuned so the shipped contractions partition as the paper states (2 well resolved, 2 moderate, 3 diffuse); they change no contraction value. ASSERTED (design decision).
 
 ## Batch 1 (P0/P1): QRSense noise floor, Tanikella sensitivity, author corrections
 

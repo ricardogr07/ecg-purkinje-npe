@@ -95,7 +95,7 @@ function CoverageCurvePlot({ curve, mode }: { curve: CoverageCurve; mode: Mode }
 }
 
 export default function CalibrationPanel() {
-  const [mode, setMode] = useState<Mode>("before");
+  const [mode, setMode] = useState<Mode>("after");
   const cal = results.calibration;
 
   if (!cal || !cal.sbc) {
