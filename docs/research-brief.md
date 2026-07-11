@@ -268,7 +268,7 @@ This equal-target normalization is what makes any cross-geometry CRLB comparison
 
 The canonical version of the observation-noise model. Renamed to **Contract D** to avoid the clash with Contract B (results artifact) in `docs/contracts.md`.
 
-Naming, resolved: Contract A = theta schema (Appendix A); Contract B = results artifact; Contract C = demo API; **Contract D = observation model (this appendix)**.
+Naming, resolved: Contract A = theta schema (Appendix A); Contract B = results artifact; **Contract D = observation model (this appendix)**.
 
 ## Why it exists (mandatory, not optional)
 The simulator is deterministic given theta (verified: the `purkinje-uv` PCG64 rng is backend-parity infrastructure, never consumed by growth; same theta twice gives a bit-identical ECG). Training an NPE on a noise-free deterministic map gives meaninglessly perfect calibration. An explicit noise model on the ECG output is therefore required to make the identifiability question well-posed. The noise model IS the likelihood, so it must be **identical** in the training simulator, the BO+ABC baseline, and the SBC/coverage/TARP harness, or the calibration story compares different problems.

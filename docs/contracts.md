@@ -1,24 +1,13 @@
 # Interface contracts
 
-These interfaces decouple the pipeline components (parameters, results artifact, demo API, noise
-model). Change them carefully: the sweep, the emitter, the demo, and the write-up all depend on them.
+These interfaces decouple the pipeline components (parameters, results artifact, noise model). Change
+them carefully: the sweep, the emitter, the demo, and the write-up all depend on them.
 
 ---
 
 ## Contract A, θ schema
 
-The 7D parameter vector. Names, ranges, units.
-
-| name | block | units | prior (uniform) | notes |
-|---|---|---|---|---|
-| `cv` | constraint | m/s | [lo, hi] TBD | global conduction velocity → QRS duration |
-| `delta_iv` | constraint | ms | [lo, hi] TBD | LV-RV interventricular delay → axis/morphology |
-| `init_length_lv` | constraint | mm | [lo, hi] TBD | LV early-activation extent |
-| `init_length_rv` | constraint | mm | [lo, hi] TBD | RV early-activation extent |
-| `branch_angle` | diffuse | rad | [lo, hi] TBD | fine topology |
-| `w` | diffuse | - | [lo, hi] TBD | branch divergence / PMJ spread |
-
-**Frozen: 7 parameters, canonical code-name order.** These supersede the TBD placeholders above. Ranges are literature-grounded and independent of the thesis `BOECGParameter` bounds (provenance and citations: `docs/research-brief.md` Appendix A).
+**Frozen: 7 parameters, canonical code-name order.** Ranges are literature-grounded (provenance and citations: `docs/research-brief.md` Appendix A).
 
 | # | name | unit | [lo, hi] |
 |---|---|---|---|
@@ -36,7 +25,7 @@ Canonical order = the table order. Serialize as a JSON object keyed by name; nev
 
 ## Contract B, results artifact
 
-One JSON per inference run. The frontend, the figures, and the write-up all read this shape.
+One JSON per inference run.
 
 ```jsonc
 {
@@ -56,17 +45,3 @@ One JSON per inference run. The frontend, the figures, and the write-up all read
   "meta": { "sim_budget": 5000, "sbi_method": "NPE", "seed": 1234, "git_sha": "..." }
 }
 ```
-
-Rule: a missing optional block (e.g., `activation_map`) must degrade gracefully in the UI, never crash.
-
----
-
-## Contract C, demo API
-
-FastAPI response shapes.
-
-- `GET  /geometry/{geometry_id}` → mesh for the 3D view (surface + fields).
-- `POST /infer` → body `{geometry_id, input_ecg, observation_kind}` → **Contract B** artifact.
-- `GET  /health` → `{status:"ok", git_sha}`.
-
-Keep it one origin (uvicorn in one task, no CORS).
