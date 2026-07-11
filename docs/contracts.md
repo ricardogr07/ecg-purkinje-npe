@@ -1,12 +1,13 @@
-# Interface Contracts (freeze by Day 2)
+# Interface contracts
 
-These three contracts decouple the tracks so they run in parallel against mocks. **Change them only with the director's sign-off**, because every track depends on them.
+These interfaces decouple the pipeline components (parameters, results artifact, demo API, noise
+model). Change them carefully: the sweep, the emitter, the demo, and the write-up all depend on them.
 
 ---
 
-## Contract A, θ schema (Science ↔ Code)
+## Contract A, θ schema
 
-The 7D parameter vector. Names, ranges, units. Frozen Jul 7.
+The 7D parameter vector. Names, ranges, units.
 
 | name | block | units | prior (uniform) | notes |
 |---|---|---|---|---|
@@ -17,25 +18,25 @@ The 7D parameter vector. Names, ranges, units. Frozen Jul 7.
 | `branch_angle` | diffuse | rad | [lo, hi] TBD | fine topology |
 | `w` | diffuse | - | [lo, hi] TBD | branch divergence / PMJ spread |
 
-**FROZEN Jul 7 (director-approved), 7 parameters, canonical CODE-name order.** These supersede the TBD placeholders above. Ranges are literature-grounded and independent of the thesis `BOECGParameter` bounds (provenance and citations: `docs/research-brief.md` Appendix A).
+**Frozen: 7 parameters, canonical code-name order.** These supersede the TBD placeholders above. Ranges are literature-grounded and independent of the thesis `BOECGParameter` bounds (provenance and citations: `docs/research-brief.md` Appendix A).
 
 | # | name | unit | [lo, hi] |
 |---|---|---|---|
-| 0 | `cv` | m/s | [1.3, 3.5]  (floor lowered from 1.5, Jul 8, to bracket crtdemo true ~1.4 interior) |
-| 1 | `delta_iv` | ms | [-90, 40]  (dyssynchrony regime; physiological provenance pending Research P2.6) |
+| 0 | `cv` | m/s | [1.3, 3.5]  (floor lowered from 1.5 to bracket crtdemo's true ~1.4 interior) |
+| 1 | `delta_iv` | ms | [-90, 40]  (dyssynchrony regime) |
 | 2 | `init_length_lv` | mm | [30, 60] |
 | 3 | `init_length_rv` | mm | [30, 60] |
 | 4 | `branch_angle` | rad | [0.10, 0.30] |
 | 5 | `w` | - | [0.05, 0.20] |
-| 6 | `cv_myo` | m/s | [0.5, 1.0]  (inferred; director chose 7 params) |
+| 6 | `cv_myo` | m/s | [0.5, 1.0]  (inferred as the 7th parameter) |
 
 Canonical order = the table order. Serialize as a JSON object keyed by name; never rely on positional order across module boundaries. The observation-noise model is **Contract D** (`docs/research-brief.md` Appendix B).
 
 ---
 
-## Contract B, results artifact (Code ↔ Design ↔ Writeup)
+## Contract B, results artifact
 
-One JSON per inference run. The frontend, the figures, and the write-up all read this shape. Design builds against a **mock** of it from Day 2.
+One JSON per inference run. The frontend, the figures, and the write-up all read this shape.
 
 ```jsonc
 {
@@ -60,12 +61,12 @@ Rule: a missing optional block (e.g., `activation_map`) must degrade gracefully 
 
 ---
 
-## Contract C, demo API (Code ↔ Design)
+## Contract C, demo API
 
-FastAPI response shapes. Mocked Day 2; Design never waits on real inference.
+FastAPI response shapes.
 
 - `GET  /geometry/{geometry_id}` → mesh for the 3D view (surface + fields).
 - `POST /infer` → body `{geometry_id, input_ecg, observation_kind}` → **Contract B** artifact.
 - `GET  /health` → `{status:"ok", git_sha}`.
 
-Keep it one origin (nginx + uvicorn in one task, no CORS), per the shelter-pulse pattern.
+Keep it one origin (uvicorn in one task, no CORS).
