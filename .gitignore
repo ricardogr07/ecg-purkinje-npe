@@ -12,8 +12,11 @@ htmlcov/
 
 # Data & artifacts (large / regenerated, publish checkpoints via releases).
 # Anchored to repo root so it ignores the top-level Strocchi download only, not the
-# small demo geometry vendored inside packages/purkinje-uv/data.
-/data/
+# small demo geometry vendored inside packages/purkinje-uv/data. Track only data/README.md
+# and data/.gitkeep (the raw meshes are hundreds of MB of CC-BY data that lives on Zenodo).
+/data/*
+!/data/.gitkeep
+!/data/README.md
 *.vtk
 *.vtu
 *.case
