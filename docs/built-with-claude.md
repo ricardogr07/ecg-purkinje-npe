@@ -10,31 +10,6 @@ the tests, alongside literature-grounded prior-art positioning, calibration-stud
 Next.js demo (activation map, ECG overlay, corner plot, calibration panel). A read-only reviewer
 pass gated scientific claims before they entered a doc, the demo, or the write-up.
 
-## The standout: a verification-first discipline
-The most distinctive use here was not code generation but a repeated, adversarial
-checked-versus-asserted discipline. Concrete examples from this build:
-
-- **Found an uncited competitor.** A verification pass surfaced Grandits et al. 2024
-  (arXiv:2411.00165), which already publishes the non-uniqueness existence result. This reframed the
-  novelty claim from "we show non-uniqueness" to "amortized, formally calibrated, per-parameter
-  quantified", before it could be overstated.
-- **Dropped an over-read citation.** A paper had a title that fit the argument but an abstract that
-  did not support it; it was removed as evidence rather than cited on the strength of its title.
-- **Caught a source-code determinism error.** An early plan assumed the simulator was stochastic and
-  needed reseeding; reading the library source showed the RNG is not consumed in tree growth, so the
-  simulator is deterministic given theta (confirmed bit-identical at runtime). That is why the
-  explicit observation-noise model is mandatory; a silent version of this error would have made the
-  whole calibration meaningless.
-- **Corrected a forward-model misattribution.** An early draft said `purkinje-uv` produces the
-  12-lead ECG; it does not. The ECG forward lives in `myocardial-mesh`. Found while wiring the
-  pipeline and corrected.
-- **A read-only review caught eight defects in one early snapshot:** a false bias claim (actually
-  within 1.4 sigma), an unseeded run, an invalid "contraction below 1 means it learns" inference, a
-  wrong contraction denominator, a circular recovery test, a cherry-picked direction, and bad budget
-  arithmetic. All corrected before anything was claimed.
-
-The running record is [`verification-ledger.md`](verification-ledger.md).
-
 ## Reproducibility and honesty
 - Everything seeded; the forward map is deterministic given theta; noise is an explicit, stated model.
 - Claims are traceable to a primary source or marked unverified.

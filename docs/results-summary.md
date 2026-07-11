@@ -2,7 +2,7 @@
 
 Status: the honest 7D result, merged to `main` and released as `v0.1.0-submission`. Numbers are the physiological-mV artifact. Everything here is synthetic-truth and calibration-honest, with no comparison against a real ECG.
 
-## Headline (honest)
+## Headline
 We built a calibrated, amortized identifiability characterization of the Purkinje conduction system from a simulated 12-lead ECG, at a stated observation-noise floor. Alongside it we surfaced and corrected three of our own errors, each of which would have carried a false headline.
 
 **No real ECG appears anywhere in this work.** The forward is a pseudo-ECG in an unbounded homogeneous volume conductor (Gima and Rudy 2002), amplitudes are reported in arbitrary units scaled to a stated mV operating point, and every target is simulator output. Comparison against measured ECGs is future work.
@@ -92,7 +92,7 @@ The spectrum is measured at one operating point (~1.5 mV, sigma 0.025 mV). F8 pr
 - **Our positive and negative claims have opposite worst cases.** The 1.4 mV amplitude sits on the low-normal edge of the human band, so it understates SNR. That makes "X is identifiable" conservative and "X is diffuse" anti-conservative. The diffuse block is therefore the exposed claim, and it is tested at sigma 0.025 mV and 2.0 mV amplitude, not at the operating point.
 - **Prior-invariant companion.** Contraction stays the intuitive, calibration-linked headline, but it is prior-width dependent by construction. The FIM-derived per-parameter CRLB and the FIM eigenspectrum are reported alongside it as the prior-free measures (Gutenkunst 2007; Raue 2009). Note that expected information gain is NOT a fix: in the Gaussian limit EIG_k = -log(contraction_k), so it inherits the same dependence.
 
-## Queued (for the critic and the write-up)
+## Queued
 1. **Pre-conformal contraction** per parameter is now emitted (`posterior.contraction_pre_conformal`) alongside the post-conformal, and the post-conformal joint TARP ATC is now measured (see Calibration above), so the before/after calibration story is a reported number, not a narrative. DONE.
 2. **Forward-Jacobian analysis** DONE (`outputs/jacobian.json`; see the FIM/CRLB section above). It no longer gates the ridge claim (settled); it explains the mechanism, gives the prior-free waveform CRLB, and shows there is no local structural degeneracy. Remaining: the features-vs-waveform NPE test that separates feature loss from local-vs-global.
 3. **Demo integrity:** the UI currently renders the design mock while `/infer` serves real posteriors. It must render real numbers, or be explicitly labeled illustrative, before recording or shipping.
