@@ -17,6 +17,8 @@ import { results } from "@/lib/artifact";
 import type { Geometry, ResultsArtifact } from "@/lib/artifact";
 import strocchiGeometry from "@mock/geometry.strocchi.json";
 import strocchiResults from "@mock/results.strocchi.json";
+import strocchiGeometry02 from "@mock/geometry.strocchi_02.json";
+import strocchiResults02 from "@mock/results.strocchi_02.json";
 
 // Spine order (argumentative, not workflow): finding first, then why it matters,
 // how it works, is the uncertainty honest, the one correlated case, what we got
@@ -172,20 +174,38 @@ export default function Home() {
           id="generalize"
           eyebrow="the real heart"
           title="The pipeline generalizes"
-          lead="The same steps run on a public anatomy. This is a claim about the method, not a second result."
+          lead="The same steps run on multiple public anatomies. This is a claim about the method, not a second result."
         >
           <div className="space-y-4">
-            <ActivationMap
-              geometry={strocchiGeometry as unknown as Geometry}
-              results={strocchiResults as unknown as ResultsArtifact}
-            />
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="space-y-2">
+                <ActivationMap
+                  geometry={strocchiGeometry as unknown as Geometry}
+                  results={strocchiResults as unknown as ResultsArtifact}
+                />
+                <p className="text-xs text-zinc-500">
+                  Strocchi heart 01: Purkinje network LV {strocchiResults.meta.lv_pmj} / RV{" "}
+                  {strocchiResults.meta.rv_pmj} PMJs.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <ActivationMap
+                  geometry={strocchiGeometry02 as unknown as Geometry}
+                  results={strocchiResults02 as unknown as ResultsArtifact}
+                />
+                <p className="text-xs text-zinc-500">
+                  Strocchi heart 02: LV {strocchiResults02.meta.lv_pmj} / RV{" "}
+                  {strocchiResults02.meta.rv_pmj} PMJs.
+                </p>
+              </div>
+            </div>
             <p className="max-w-2xl text-sm text-zinc-400">
-              The pipeline ingests a public CC-BY-4.0 four-chamber mesh (Strocchi et al., PLoS ONE
-              2020), derives the endocardium from the mesh&apos;s own universal ventricular
-              coordinates, grows a Purkinje network (LV 44, RV 138 PMJs), places electrodes from the
-              heart&apos;s own axes, and synthesizes a pseudo-ECG. This demonstrates that the method
-              generalizes to real anatomy. No identifiability result is claimed on this geometry:
-              crtdemo&apos;s PMJ counts are 87 and 166, so this network is sparser.
+              The pipeline ingests public CC-BY-4.0 four-chamber meshes (Strocchi et al., PLoS ONE
+              2020), derives each endocardium from the mesh&apos;s own universal ventricular
+              coordinates, grows a Purkinje network, places electrodes from the heart&apos;s own axes,
+              and synthesizes a pseudo-ECG. This demonstrates that the method generalizes to real
+              anatomy. No identifiability result is claimed on any of these hearts (crtdemo&apos;s PMJ
+              counts are 87 and 166 for reference).
             </p>
           </div>
         </Section>
