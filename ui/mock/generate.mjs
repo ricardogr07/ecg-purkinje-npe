@@ -407,7 +407,10 @@ const results = {
     values: round(activation, 1),
   },
   calibration: makeCalibration(),
-  noise_model: { kind: "waveform", sigma: NOISE_MV, timing_sigma_ms: 5, amp_sigma_mv: 0.05 },
+  // Spectrum/identifiability floor is the applied WAVEFORM sigma only. The feature-channel
+  // floor (0.05 mV / 5 ms) belongs to the CRLB-vs-CRLB comparison, not this artifact; keeping
+  // it here made the header (Header.tsx) show the wrong floor if the mock is ever imported.
+  noise_model: { kind: "waveform", sigma: NOISE_MV },
   meta: {
     sim_budget: 5000,
     sbi_method: "NPE",
