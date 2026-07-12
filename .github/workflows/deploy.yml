@@ -54,6 +54,12 @@ jobs:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
       - name: Sync ui/out to S3
-        run: aws s3 sync ui/out "s3://${{ vars.AWS_S3_BUCKET }}" --delete
+        # Content-hashed assets are immutable (1y cache); HTML and text artifacts must revalidate so
+        # every deploy is live immediately (the header also reaches the browser via CloudFront).
+        run: |
+          aws s3 sync ui/out/_next "s3://${{ vars.AWS_S3_BUCKET }}/_next" --delete \
+            --cache-control "public,max-age=31536000,immutable"
+          aws s3 sync ui/out "s3://${{ vars.AWS_S3_BUCKET }}" --delete --exclude "_next/*" \
+            --cache-control "public,max-age=0,must-revalidate"
       - name: Invalidate CloudFront
         run: aws cloudfront create-invalidation --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" --paths '/*'
