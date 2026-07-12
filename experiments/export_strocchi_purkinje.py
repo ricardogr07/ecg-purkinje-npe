@@ -1,13 +1,13 @@
-"""Export the grown LV/RV Purkinje trees for the Strocchi hearts and patch them into the committed
-ui/mock/geometry.strocchi*.json (a method-generality overlay; NO identifiability claim).
+"""Export the grown LV/RV Purkinje trees for the Strocchi hearts and patch them into the
+committed ui/mock/geometry.strocchi*.json (a method-generality overlay; NO identifiability claim).
 
-No eikonal forward is run: the trees come from the FAST adapter.strocchi.load_geometry, the same call
-behind the shipped Strocchi activation maps. The serialized shape mirrors experiments/export_geometry.py
-so ActivationMap renders it exactly as it does crtdemo.
+No eikonal forward is run: the trees come from the fast adapter.strocchi.load_geometry, the same
+call behind the shipped Strocchi activation maps. The serialized shape mirrors
+experiments/export_geometry.py so ActivationMap renders it exactly as it does crtdemo.
 
-Integrity gate: the exported tree PMJ count (int(tree.pmj.size), the same quantity meta.lv_pmj/rv_pmj was
-computed from) MUST equal the stored meta. On any mismatch the script exits non-zero and writes nothing,
-so a tree that is not the one behind the shown map can never ship.
+Integrity gate: the exported PMJ count (int(tree.pmj.size), how meta.lv_pmj/rv_pmj was computed)
+MUST equal the stored meta. On any mismatch the script exits non-zero and writes nothing, so a tree
+that is not the one behind the shown map can never ship.
 
 Run: uv run --no-sync python experiments/export_strocchi_purkinje.py
 """
@@ -58,15 +58,13 @@ def main() -> None:
         meta = json.loads((MOCK / h["results"]).read_text())["meta"]
         assert n_lv == meta["lv_pmj"], f"{h['geom']}: LV PMJ {n_lv} != meta {meta['lv_pmj']}"
         assert n_rv == meta["rv_pmj"], f"{h['geom']}: RV PMJ {n_rv} != meta {meta['rv_pmj']}"
-        patches.append((h["geom"], tree_json(lv), tree_json(rv), n_lv, n_rv))
+        patches.append((h["geom"], tree_json(lv), tree_json(rv)))
         print(
-            f"[strocchi-purkinje] {h['geom']}: LV {np.asarray(lv.xyz).shape[0]} nodes / {n_lv} PMJs, "
-            f"RV {np.asarray(rv.xyz).shape[0]} nodes / {n_rv} PMJs (gate OK)",
-            flush=True,
+            f"[strocchi-purkinje] {h['geom']}: LV {n_lv} PMJs, RV {n_rv} PMJs (gate OK)", flush=True
         )
 
     # Pass 2: patch the geometry artifacts (same mm frame as the surface vertices, no transform).
-    for geom_name, lv_json, rv_json, _n_lv, _n_rv in patches:
+    for geom_name, lv_json, rv_json in patches:
         gpath = MOCK / geom_name
         geometry = json.loads(gpath.read_text())
         geometry["purkinje"] = {"lv": lv_json, "rv": rv_json}
