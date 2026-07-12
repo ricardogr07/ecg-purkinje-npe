@@ -205,8 +205,9 @@ export default function Home() {
                   results={strocchiResults as unknown as ResultsArtifact}
                 />
                 <p className="font-mono text-xs text-zinc-500">
-                  Figure 2. Strocchi heart 01: LV {strocchiResults.meta.lv_pmj} / RV{" "}
-                  {strocchiResults.meta.rv_pmj} Purkinje-muscle junctions (from metadata).
+                  Figure 2. Strocchi heart 01: grown LV / RV Purkinje network,{" "}
+                  {strocchiResults.meta.lv_pmj} / {strocchiResults.meta.rv_pmj} Purkinje-muscle
+                  junctions.
                 </p>
               </div>
               <div className="space-y-2">
@@ -219,8 +220,9 @@ export default function Home() {
                   results={strocchiResults02 as unknown as ResultsArtifact}
                 />
                 <p className="font-mono text-xs text-zinc-500">
-                  Figure 3. Strocchi heart 02: LV {strocchiResults02.meta.lv_pmj} / RV{" "}
-                  {strocchiResults02.meta.rv_pmj} Purkinje-muscle junctions (from metadata).
+                  Figure 3. Strocchi heart 02: grown LV / RV Purkinje network,{" "}
+                  {strocchiResults02.meta.lv_pmj} / {strocchiResults02.meta.rv_pmj} Purkinje-muscle
+                  junctions.
                 </p>
               </div>
             </div>
