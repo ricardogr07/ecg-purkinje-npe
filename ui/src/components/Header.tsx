@@ -22,9 +22,9 @@ export default function Header() {
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <a href="#finding" className="flex items-center gap-2 text-sm font-bold text-zinc-100">
           <span aria-hidden="true" className="text-indigo-400">
-            {"</>"}
+            ◎
           </span>
-          ECG to Purkinje
+          Conduction Lens
         </a>
         <div className="hidden items-center gap-5 text-sm lg:flex">
           {LINKS.map((l) => (
@@ -33,7 +33,7 @@ export default function Header() {
             </a>
           ))}
           <a
-            href="https://github.com/ricardogr07/ecg-purkinje-npe/blob/main/technical-writeup/ieee-paper/paper.pdf"
+            href="https://doi.org/10.5281/zenodo.21315609"
             className="text-zinc-400 hover:text-indigo-300"
           >
             Paper

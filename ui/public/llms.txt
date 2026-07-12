@@ -1,0 +1,39 @@
+<!--
+             ,d88b. ,d88b.
+           d888888888888888b
+          8888888888888888888
+          `Y88888888888888P'
+            `Y8888888888P'
+              `Y88888P'
+                `Y8P'
+                 `'
+     _____/\______/\______/\______/\______/\_____
+
+              C O N D U C T I O N   L E N S
+
+   Built for Built with Claude: Life Sciences
+   by Ricardo García Ramírez
+-->
+
+# Conduction Lens
+
+> A calibrated, amortized identifiability characterization of the His-Purkinje conduction system from a simulated 12-lead ECG. It reports which cardiac conduction parameters the surface ECG can and cannot recover, at a stated observation-noise floor, with formal calibration. The contribution is a scientific finding, not a new method.
+
+Everything is measured on a simulated ECG. There is no real ECG in this project, and comparison against measured recordings is future work. Identifiability is reported at the waveform noise floor: white Gaussian, sigma = 0.025 mV per sample per lead, on a physiological-mV pseudo-ECG forward.
+
+## Project
+
+- [Live demo](https://d2b1qd2pllzgje.cloudfront.net): the calibrated identifiability spectrum, calibration panel, and posterior degeneracy corner plot, as a static export from a named run.
+- [Source code](https://github.com/ricardogr07/ecg-purkinje-npe): the full pipeline (purkinje-uv fractal tree, eikonal forward, pseudo-ECG, amortized NPE) and the reproduction recipe.
+- [Paper (Zenodo DOI 10.5281/zenodo.21315609)](https://doi.org/10.5281/zenodo.21315609): the IEEE-format manuscript.
+
+## The finding
+
+- Interventricular delay (delta_iv) and myocardial conduction velocity (cv_myo) are tightly constrained by the ECG.
+- LV and RV initial extent and conduction velocity are moderately constrained.
+- Branch angle and the diffuse-block tree-shape parameters stay diffuse, no tighter than the prior.
+- Simulation-based calibration caught an overconfident posterior; per-parameter conformal recalibration restores coverage. A public verification ledger records every load-bearing claim.
+
+## Method generality
+
+- The same pipeline runs on the public Strocchi four-chamber mesh cohort (CC-BY-4.0). That is a claim about the method, not a second identifiability result.

@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import { Section, Card } from "@/components/Layout";
 import ProvenanceChip, { type Provenance } from "@/components/ProvenanceChip";
 import Hero from "@/components/Hero";
+import BrandHero from "@/components/BrandHero";
 import IdentifiabilitySpectrum from "@/components/IdentifiabilitySpectrum";
 import WhyItMatters from "@/components/WhyItMatters";
 import HowItWorks from "@/components/HowItWorks";
@@ -51,6 +52,8 @@ export default function Home() {
     <>
       <Header />
       <main id="main" className="flex-1">
+        {/* 00. brand masthead, centered, above the manuscript arc */}
+        <BrandHero />
         {/* 01. the question: the hero + the spectrum as proof */}
         <section id="finding" className="scroll-mt-20 border-b border-zinc-800">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:py-24">

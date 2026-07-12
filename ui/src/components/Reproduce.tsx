@@ -6,8 +6,8 @@ const CARDS = [
     title: "The paper",
     hint: "IEEE / Zenodo manuscript",
     body: "The full write-up: methods, the calibrated identifiability spectrum, calibration, and the honest limitations, as a self-contained IEEE-format paper.",
-    href: "https://github.com/ricardogr07/ecg-purkinje-npe/blob/main/technical-writeup/ieee-paper/paper.pdf",
-    linkText: "Read the paper (PDF)",
+    href: "https://doi.org/10.5281/zenodo.21315609",
+    linkText: "Read the paper (Zenodo)",
   },
   {
     title: "Verification ledger",
