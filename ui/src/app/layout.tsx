@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ECG to Purkinje: Calibrated Identifiability",
+  title: "Conduction Lens: Calibrated Identifiability of Purkinje Conduction",
   description:
     "Which Purkinje conduction parameters the surface ECG can and cannot pin down, with calibrated uncertainty. Amortized Neural Posterior Estimation on a public heart mesh.",
 };

@@ -31,7 +31,7 @@ export default function Footer() {
     <footer className="border-t border-zinc-800 py-12">
       <div className="mx-auto max-w-6xl px-4 text-center">
         <p className="text-sm text-zinc-300">
-          <span className="font-semibold text-zinc-100">ECG to Purkinje</span> · Calibrated
+          <span className="font-semibold text-zinc-100">Conduction Lens</span> · Calibrated
           identifiability of the conduction system from the surface ECG
         </p>
         <p className="mt-3 text-sm text-zinc-400">
