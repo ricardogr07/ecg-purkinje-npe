@@ -30,8 +30,8 @@ Everything is measured on a simulated ECG. There is no real ECG in this project,
 ## The finding
 
 - Interventricular delay (delta_iv) and myocardial conduction velocity (cv_myo) are tightly constrained by the ECG.
-- LV and RV initial extent and conduction velocity are moderately constrained.
-- Branch angle and the diffuse-block tree-shape parameters stay diffuse, no tighter than the prior.
+- RV initial Purkinje extent and conduction velocity are moderately constrained.
+- LV initial extent, branch angle, and branch repulsivity stay diffuse, no tighter than the prior.
 - Simulation-based calibration caught an overconfident posterior; per-parameter conformal recalibration restores coverage. A public verification ledger records every load-bearing claim.
 
 ## Method generality

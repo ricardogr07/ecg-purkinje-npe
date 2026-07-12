@@ -82,6 +82,12 @@ export default function Home() {
           title="The ECG resolves the parameter clinicians actually use"
         >
           <WhyItMatters />
+          <p className="mt-8 border-l-2 border-indigo-500/40 pl-4 text-base leading-relaxed text-zinc-300">
+            Anyone fitting conduction models to the ECG can reuse this: the calibrated identifiability
+            recipe, plus the released weights, sweeps, and verification ledger, says which of their own
+            reported parameters are measurements and which are prior beliefs. The same pipeline already
+            runs on the public Strocchi cohort, so a new anatomy is a config change, not a rebuild.
+          </p>
           <Connective>
             That is the stake. Here is the machine that turns a heart into an ECG, and the ECG back
             into a distribution over parameters.
