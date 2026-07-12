@@ -15,7 +15,12 @@ echo "[deploy] building static export..."
 (cd "$root/ui" && npm run build)
 
 echo "[deploy] syncing ui/out -> s3://$bucket"
-aws s3 sync "$root/ui/out" "s3://$bucket" --delete
+# Content-hashed assets are immutable (1y cache); HTML and text artifacts must revalidate so every
+# deploy is live immediately (the header also reaches the browser via CloudFront).
+aws s3 sync "$root/ui/out/_next" "s3://$bucket/_next" --delete \
+  --cache-control "public,max-age=31536000,immutable"
+aws s3 sync "$root/ui/out" "s3://$bucket" --delete --exclude "_next/*" \
+  --cache-control "public,max-age=0,must-revalidate"
 
 echo "[deploy] invalidating CloudFront $dist"
 aws cloudfront create-invalidation --distribution-id "$dist" --paths '/*' >/dev/null
