@@ -82,12 +82,11 @@ export default function ActivationMap({ geometry: geometryProp, results: results
   const faces = geometry?.faces;
   const lat = results.activation_map?.values;
   const chamber = geometry?.chamber;
-  // The Strocchi demo ships the myocardial surface + activation map only: the Purkinje tree
-  // geometry is not bundled for these hearts (PMJ counts live in the results meta, the node/edge
-  // geometry does not), so this is a method-generality figure, not an anatomically faithful tree
-  // render. Suppress the tree.
+  // Purkinje overlay: the grown LV/RV fractal trees bundled in the geometry artifact (crtdemo and
+  // both Strocchi hearts). Data-gated, so the LV/RV layer toggles light up when a geometry provides
+  // purkinje and stay hidden otherwise. isStrocchi remains the no-purkinje caption fallback.
   const isStrocchi = (geometry?.geometry_id ?? "").toLowerCase().includes("strocchi");
-  const purk = isStrocchi ? undefined : geometry?.purkinje;
+  const purk = geometry?.purkinje;
 
   const hasGeom = !!(verts?.length && faces?.length);
   const hasLat = !!(lat?.length && lat.length === verts?.length);
