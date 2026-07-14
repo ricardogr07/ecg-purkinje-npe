@@ -6,6 +6,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21315609.svg)](https://doi.org/10.5281/zenodo.21315609)
 [![Live demo](https://img.shields.io/badge/live%20demo-CloudFront-6366f1)](https://d2b1qd2pllzgje.cloudfront.net)
+[![Portfolio write-up](https://img.shields.io/badge/portfolio-write--up-6366f1)](https://ricardogr07.github.io/projects/conduction-lens/)
 
 We train an amortized Neural Posterior Estimator (`sbi`) over cardiac conduction parameters at fixed
 anatomy and report, with formal calibration, **which parts of the His-Purkinje conduction system a
