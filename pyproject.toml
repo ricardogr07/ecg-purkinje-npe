@@ -40,13 +40,12 @@ packages = [
     "src/api",
 ]
 
-# Own libraries are vendored in-tree (packages/) and consumed editable, so our changes to
+# Own simulator libraries are bundled in-tree (packages/) and consumed editable, so our changes to
 # them take effect live. purkinje-uv = fractal tree + Purkinje activation; myocardial-mesh =
 # volumetric myocardial eikonal + 12-lead ECG; jaxbo = GP Bayesian-optimization baseline.
 [tool.uv.sources]
 purkinje-uv = { path = "packages/purkinje-uv", editable = true }
 myocardial-mesh = { path = "packages/myocardial-mesh", editable = true }
-jaxbo = { path = "packages/jax-bo", editable = true }
 # CPU-only torch: the default wheels pull ~5 GB of nvidia CUDA deps into our CPU-only image (and
 # hit a cudnn hash mismatch on Linux). Pin torch to the PyTorch CPU index for a lean, buildable image.
 torch = { index = "pytorch-cpu" }
@@ -66,7 +65,7 @@ dev = [
 # jaxlib is finicky on Windows). Kept out of the default sync; install on demand with
 # `uv sync --group baseline` when the baseline work starts.
 baseline = [
-    "jaxbo",
+    "jaxbo>=0.2.2,<0.3",
 ]
 
 [tool.pytest.ini_options]
@@ -77,7 +76,7 @@ testpaths = ["tests"]
 line-length = 100
 target-version = "py311"
 src = ["src", "tests", "conduction_lens"]
-# Vendored libraries, the ui/ demo, and the technical-writeup/ paper lane keep their own style/CI;
+# Bundled libraries, the ui/ demo, and the technical-writeup/ paper lane keep their own style/CI;
 # not ours to lint.
 extend-exclude = ["packages", "ui", "technical-writeup"]
 

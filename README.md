@@ -62,9 +62,9 @@ Python via `uv` (`ruff`, `pytest`), `sbi` for the neural posterior estimator. Fa
 demo, deployed as a static export to AWS S3 + CloudFront (CPU-only, no GPU anywhere). Data: the Strocchi
 four-chamber mesh cohort (Zenodo 3890034, CC-BY-4.0).
 
-## Attribution and vendored components
+## Attribution and bundled components
 
-This project stands on the author's own open-source libraries, vendored in-tree under `packages/` and
+This project stands on the author's own open-source libraries. The simulator libraries remain bundled in `packages/`, while
 reworked during the work as part of the analysis:
 
 - `packages/purkinje-uv` (MIT), fractal-tree Purkinje generation and the FIM eikonal activation solver;
@@ -73,9 +73,9 @@ reworked during the work as part of the analysis:
   `1/|r|` infinite-homogeneous-medium kernel at assumed standard electrode positions, not a torso
   volume conductor) producing the 12-lead ECG, plus the bundled crtdemo geometry.
   Upstream: https://github.com/ricardogr07/purkinje-learning-myocardial-mesh
-- `packages/jax-bo` (Apache-2.0, author's own fork), the Bayesian-optimization validation baseline.
+- `jaxbo` (Apache-2.0, author's published fork), the Bayesian-optimization validation baseline.
 
-Each vendored library retains its upstream LICENSE. `myocardial-mesh` (repo
+Each bundled library retains its upstream LICENSE. `myocardial-mesh` (repo
 `purkinje-learning-myocardial-mesh`) is a separate published MIT library for the forward simulator,
 distinct from the thesis-analysis package `purkinje-learning`, which is deliberately not used.
 
@@ -88,7 +88,7 @@ Analysis 2025, [arXiv:2312.09887](https://arxiv.org/abs/2312.09887)). That paper
 departure for this follow-on characterization; our contribution is to make the same target problem
 amortized and formally calibrated.
 
-The vendored `purkinje-uv` and `myocardial-mesh` libraries were developed and reworked by the author
+The bundled `purkinje-uv` and `myocardial-mesh` libraries were developed and reworked by the author
 around this problem during their MSc, and the fractal-tree Purkinje generation they implement is the
 Sahli Costabal, Hurtado, Kuhl 2015 method ("Generating Purkinje networks in the human heart",
 J. Biomech., PMID 26748729). See [`docs/related-work.md`](docs/related-work.md) for the full prior-art
